@@ -1,0 +1,307 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		6C0F232A14DF0417003F104C /* GFCampfireMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C0F232914DF0417003F104C /* GFCampfireMessage.m */; };
+		6C0F232E14DF07AB003F104C /* GFCampfireUpload.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C0F232D14DF07AB003F104C /* GFCampfireUpload.m */; };
+		6C47C18514DDF67F00AF16FA /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C47C18414DDF67F00AF16FA /* CoreFoundation.framework */; };
+		6C47C18B14DDF67F00AF16FA /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 6C47C18914DDF67F00AF16FA /* InfoPlist.strings */; };
+		6C47C19314DDF8FF00AF16FA /* Logo.png in Resources */ = {isa = PBXBuildFile; fileRef = 6C47C19214DDF8FF00AF16FA /* Logo.png */; };
+		6C47C19814DDFE0F00AF16FA /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C47C19714DDFE0F00AF16FA /* Cocoa.framework */; };
+		6C47C19A14DDFEF400AF16FA /* IMServicePlugIn.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C47C19914DDFEF400AF16FA /* IMServicePlugIn.framework */; };
+		6C47C1A114DE02E600AF16FA /* GFCampfireServicePlugIn.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C47C1A014DE02E600AF16FA /* GFCampfireServicePlugIn.m */; };
+		6C47C1A414DE030500AF16FA /* GFCampfireUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C47C1A314DE030400AF16FA /* GFCampfireUser.m */; };
+		6C47C1A714DE037800AF16FA /* GFCampfireRoom.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C47C1A614DE037800AF16FA /* GFCampfireRoom.m */; };
+		6C47C1AA14DE04DC00AF16FA /* GFCampfireService.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C47C1A914DE04DC00AF16FA /* GFCampfireService.m */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		6C0F232814DF0416003F104C /* GFCampfireMessage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFCampfireMessage.h; sourceTree = "<group>"; };
+		6C0F232914DF0417003F104C /* GFCampfireMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireMessage.m; sourceTree = "<group>"; };
+		6C0F232C14DF07AB003F104C /* GFCampfireUpload.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFCampfireUpload.h; sourceTree = "<group>"; };
+		6C0F232D14DF07AB003F104C /* GFCampfireUpload.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireUpload.m; sourceTree = "<group>"; };
+		6C47C18114DDF67F00AF16FA /* Campfire.imserviceplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Campfire.imserviceplugin; sourceTree = BUILT_PRODUCTS_DIR; };
+		6C47C18414DDF67F00AF16FA /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		6C47C18814DDF67F00AF16FA /* Campfire-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Campfire-Info.plist"; sourceTree = "<group>"; };
+		6C47C18A14DDF67F00AF16FA /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		6C47C18C14DDF67F00AF16FA /* Campfire-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Campfire-Prefix.pch"; sourceTree = "<group>"; };
+		6C47C19214DDF8FF00AF16FA /* Logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Logo.png; sourceTree = "<group>"; };
+		6C47C19714DDFE0F00AF16FA /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		6C47C19914DDFEF400AF16FA /* IMServicePlugIn.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IMServicePlugIn.framework; path = System/Library/Frameworks/IMServicePlugIn.framework; sourceTree = SDKROOT; };
+		6C47C19F14DE02E600AF16FA /* GFCampfireServicePlugIn.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFCampfireServicePlugIn.h; sourceTree = "<group>"; };
+		6C47C1A014DE02E600AF16FA /* GFCampfireServicePlugIn.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireServicePlugIn.m; sourceTree = "<group>"; };
+		6C47C1A214DE030400AF16FA /* GFCampfireUser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFCampfireUser.h; sourceTree = "<group>"; };
+		6C47C1A314DE030400AF16FA /* GFCampfireUser.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireUser.m; sourceTree = "<group>"; };
+		6C47C1A514DE037800AF16FA /* GFCampfireRoom.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFCampfireRoom.h; sourceTree = "<group>"; };
+		6C47C1A614DE037800AF16FA /* GFCampfireRoom.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireRoom.m; sourceTree = "<group>"; };
+		6C47C1A814DE04DC00AF16FA /* GFCampfireService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFCampfireService.h; sourceTree = "<group>"; };
+		6C47C1A914DE04DC00AF16FA /* GFCampfireService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireService.m; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		6C47C17E14DDF67F00AF16FA /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6C47C19A14DDFEF400AF16FA /* IMServicePlugIn.framework in Frameworks */,
+				6C47C19814DDFE0F00AF16FA /* Cocoa.framework in Frameworks */,
+				6C47C18514DDF67F00AF16FA /* CoreFoundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		6C47C17614DDF67F00AF16FA = {
+			isa = PBXGroup;
+			children = (
+				6C47C18614DDF67F00AF16FA /* Campfire */,
+				6C47C18314DDF67F00AF16FA /* Frameworks */,
+				6C47C18214DDF67F00AF16FA /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		6C47C18214DDF67F00AF16FA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				6C47C18114DDF67F00AF16FA /* Campfire.imserviceplugin */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6C47C18314DDF67F00AF16FA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				6C47C19914DDFEF400AF16FA /* IMServicePlugIn.framework */,
+				6C47C19714DDFE0F00AF16FA /* Cocoa.framework */,
+				6C47C18414DDF67F00AF16FA /* CoreFoundation.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		6C47C18614DDF67F00AF16FA /* Campfire */ = {
+			isa = PBXGroup;
+			children = (
+				6C47C19E14DE02E600AF16FA /* Source */,
+				6C47C18714DDF67F00AF16FA /* Supporting Files */,
+			);
+			path = Campfire;
+			sourceTree = "<group>";
+		};
+		6C47C18714DDF67F00AF16FA /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				6C47C19214DDF8FF00AF16FA /* Logo.png */,
+				6C47C18814DDF67F00AF16FA /* Campfire-Info.plist */,
+				6C47C18914DDF67F00AF16FA /* InfoPlist.strings */,
+				6C47C18C14DDF67F00AF16FA /* Campfire-Prefix.pch */,
+			);
+			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		6C47C19E14DE02E600AF16FA /* Source */ = {
+			isa = PBXGroup;
+			children = (
+				6C0F232814DF0416003F104C /* GFCampfireMessage.h */,
+				6C0F232914DF0417003F104C /* GFCampfireMessage.m */,
+				6C47C1A514DE037800AF16FA /* GFCampfireRoom.h */,
+				6C47C1A614DE037800AF16FA /* GFCampfireRoom.m */,
+				6C47C1A814DE04DC00AF16FA /* GFCampfireService.h */,
+				6C47C1A914DE04DC00AF16FA /* GFCampfireService.m */,
+				6C47C19F14DE02E600AF16FA /* GFCampfireServicePlugIn.h */,
+				6C47C1A014DE02E600AF16FA /* GFCampfireServicePlugIn.m */,
+				6C0F232C14DF07AB003F104C /* GFCampfireUpload.h */,
+				6C0F232D14DF07AB003F104C /* GFCampfireUpload.m */,
+				6C47C1A214DE030400AF16FA /* GFCampfireUser.h */,
+				6C47C1A314DE030400AF16FA /* GFCampfireUser.m */,
+			);
+			path = Source;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		6C47C18014DDF67F00AF16FA /* Campfire */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6C47C18F14DDF67F00AF16FA /* Build configuration list for PBXNativeTarget "Campfire" */;
+			buildPhases = (
+				6C47C17D14DDF67F00AF16FA /* Sources */,
+				6C47C17E14DDF67F00AF16FA /* Frameworks */,
+				6C47C17F14DDF67F00AF16FA /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Campfire;
+			productName = Campfire;
+			productReference = 6C47C18114DDF67F00AF16FA /* Campfire.imserviceplugin */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		6C47C17814DDF67F00AF16FA /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0420;
+				ORGANIZATIONNAME = "g-Off.net";
+			};
+			buildConfigurationList = 6C47C17B14DDF67F00AF16FA /* Build configuration list for PBXProject "Campfire" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 6C47C17614DDF67F00AF16FA;
+			productRefGroup = 6C47C18214DDF67F00AF16FA /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				6C47C18014DDF67F00AF16FA /* Campfire */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6C47C17F14DDF67F00AF16FA /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6C47C18B14DDF67F00AF16FA /* InfoPlist.strings in Resources */,
+				6C47C19314DDF8FF00AF16FA /* Logo.png in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		6C47C17D14DDF67F00AF16FA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6C47C1A114DE02E600AF16FA /* GFCampfireServicePlugIn.m in Sources */,
+				6C47C1A414DE030500AF16FA /* GFCampfireUser.m in Sources */,
+				6C47C1A714DE037800AF16FA /* GFCampfireRoom.m in Sources */,
+				6C47C1AA14DE04DC00AF16FA /* GFCampfireService.m in Sources */,
+				6C0F232A14DF0417003F104C /* GFCampfireMessage.m in Sources */,
+				6C0F232E14DF07AB003F104C /* GFCampfireUpload.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		6C47C18914DDF67F00AF16FA /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				6C47C18A14DDF67F00AF16FA /* en */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		6C47C18D14DDF67F00AF16FA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		6C47C18E14DDF67F00AF16FA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_MISSING_PROTOTYPES = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		6C47C19014DDF67F00AF16FA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "Campfire/Campfire-Prefix.pch";
+				INFOPLIST_FILE = "Campfire/Campfire-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = imserviceplugin;
+			};
+			name = Debug;
+		};
+		6C47C19114DDF67F00AF16FA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "Campfire/Campfire-Prefix.pch";
+				INFOPLIST_FILE = "Campfire/Campfire-Info.plist";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Bundles";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				WRAPPER_EXTENSION = imserviceplugin;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6C47C17B14DDF67F00AF16FA /* Build configuration list for PBXProject "Campfire" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6C47C18D14DDF67F00AF16FA /* Debug */,
+				6C47C18E14DDF67F00AF16FA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		6C47C18F14DDF67F00AF16FA /* Build configuration list for PBXNativeTarget "Campfire" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6C47C19014DDF67F00AF16FA /* Debug */,
+				6C47C19114DDF67F00AF16FA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 6C47C17814DDF67F00AF16FA /* Project object */;
+}
