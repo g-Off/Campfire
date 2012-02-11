@@ -1,0 +1,6 @@
+[submodule "CocoaLumberjack"]
+	path = CocoaLumberjack
+	url = git://github.com/robbiehanson/CocoaLumberjack.git
+[submodule "MKNetworkKit"]
+	path = MKNetworkKit
+	url = git://github.com/MugunthKumar/MKNetworkKit.git

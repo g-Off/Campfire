@@ -7,14 +7,34 @@
 //
 
 #import "GFCampfireServicePlugIn.h"
+#import "DDLog.h"
+#import "DDASLLogger.h"
+
+#import <MKNetworkKit/MKNetworkKit.h>
+
+#import "GFCampfireUser.h"
+
+static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 @implementation GFCampfireServicePlugIn {
 	id <IMServiceApplication> serviceApplication;
 	NSString *username;
 	NSString *password;
 	NSString *server;
+	BOOL useSSL;
 	
 	NSURL *serverURL;
+	
+	MKNetworkEngine *networkEngine;
+	
+	GFCampfireUser *me;
+}
+
++ (void)initialize
+{
+	if (self == [GFCampfireServicePlugIn class]) {
+		[DDLog addLogger:[DDASLLogger sharedInstance]];
+	}
 }
 
 #pragma mark -
@@ -34,14 +54,35 @@
 	server = [accountSettings objectForKey:IMAccountSettingServerHost];
 	username = [accountSettings objectForKey:IMAccountSettingLoginHandle];
 	password = [accountSettings objectForKey:IMAccountSettingPassword];
+	useSSL = [[accountSettings objectForKey:IMAccountSettingUsesSSL] boolValue];
 	
-	serverURL = [NSURL URLWithString:server];
+//	if (useSSL) {
+//		if ([server hasPrefix:@"https://"] == NO) {
+//			server = [NSString stringWithFormat:@"https://%@", server];
+//		}
+//	} else {
+//		if ([server hasPrefix:@"http://"] == NO) {
+//			server = [NSString stringWithFormat:@"http://%@", server];
+//		}
+//	}
+	
+	DDLogInfo(@"%@", accountSettings);
+	
+	networkEngine = [[MKNetworkEngine alloc] initWithHostName:server customHeaderFields:nil];
 }
 
 - (oneway void)login
 {
-	NSURL *url = [NSURL URLWithString:@"users/me.xml" relativeToURL:serverURL];
-	NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:url];
+	MKNetworkOperation *loginOperation = [networkEngine operationWithPath:@"users/me.json" params:nil httpMethod:@"GET" ssl:useSSL];
+	[loginOperation setUsername:username password:password basicAuth:YES];
+	[loginOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+		id json = [completedOperation responseJSON];
+		NSLog(@"%@", json);
+	} onError:^(NSError *error) {
+		NSLog(@"%@", error);
+	}];
+//	[loginOperation setAuthHandler:(MKNKAuthBlock)authHandler];
+	[networkEngine enqueueOperation:loginOperation forceReload:YES];
 }
 
 - (oneway void)logout

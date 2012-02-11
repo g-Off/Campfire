@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>English</string>
+	<string>en</string>
 	<key>CFBundleExecutable</key>
 	<string>${EXECUTABLE_NAME}</string>
 	<key>CFBundleIconFile</key>
-	<string>Logo.png</string>
+	<string></string>
 	<key>CFBundleIdentifier</key>
 	<string>net.g-Off.${PRODUCT_NAME:rfc1034identifier}</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -15,32 +15,20 @@
 	<key>CFBundleName</key>
 	<string>${PRODUCT_NAME}</string>
 	<key>CFBundlePackageType</key>
-	<string>BNDL</string>
+	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
-	<key>CFPlugInUnloadFunction</key>
-	<string></string>
-	<key>IMServiceCapabilities</key>
-	<array>
-		<string>IMServiceCapabilityInstantMessagingSupport</string>
-		<string>IMServiceCapabilityChatRoomSupport</string>
-		<string>IMServiceCapabilityGroupListSupport</string>
-		<string>IMServiceCapabilityGroupListHandlePictureSupport</string>
-		<string>IMServiceCapabilityPresenceSupport</string>
-	</array>
-	<key>IMUsesEnableSSLAccountSetting</key>
-	<true/>
-	<key>IMUsesPasswordAccountSetting</key>
-	<true/>
-	<key>IMUsesServerPortAccountSetting</key>
-	<false/>
+	<key>LSMinimumSystemVersion</key>
+	<string>${MACOSX_DEPLOYMENT_TARGET}</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright © 2012 Geoffrey Foster. All rights reserved.</string>
+	<string>Copyright © 2012 __MyCompanyName__. All rights reserved.</string>
+	<key>NSMainNibFile</key>
+	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
-	<string>GFCampfireServicePlugIn</string>
+	<string>NSApplication</string>
 </dict>
 </plist>

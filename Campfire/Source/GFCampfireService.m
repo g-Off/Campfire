@@ -11,25 +11,3 @@
 @implementation GFCampfireService
 
 @end
-
-@implementation GFCampfireServiceParser {
-	id currentObject;
-	NSString *currentElementName;
-}
-
-- (void)parser:(NSXMLParser *)parser didStartElement:(NSString *)elementName namespaceURI:(NSString *)namespaceURI qualifiedName:(NSString *)qName attributes:(NSDictionary *)attributeDict
-{
-	currentElementName = elementName;
-}
-
-- (void)parser:(NSXMLParser *)parser didEndElement:(NSString *)elementName namespaceURI:(NSString *)namespaceURI qualifiedName:(NSString *)qName
-{
-	currentElementName = nil;
-}
-
-- (void)parser:(NSXMLParser *)parser foundCharacters:(NSString *)string
-{
-	
-}
-
-@end

@@ -11,7 +11,3 @@
 @interface GFCampfireService : NSObject
 
 @end
-
-@interface GFCampfireServiceParser : NSObject <NSXMLParserDelegate>
-
-@end

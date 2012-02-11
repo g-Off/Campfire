@@ -9,6 +9,11 @@
 #import <Cocoa/Cocoa.h>
 #import <IMServicePlugIn/IMServicePlugIn.h>
 
-@interface GFCampfireServicePlugIn : NSObject <IMServicePlugIn, IMServicePlugInChatRoomSupport>
+@interface GFCampfireServicePlugIn : NSObject <IMServicePlugIn,
+IMServicePlugInGroupListSupport,
+IMServicePlugInGroupListHandlePictureSupport,
+IMServicePlugInInstantMessagingSupport,
+IMServicePlugInChatRoomSupport,
+IMServicePlugInPresenceSupport>
 
 @end
