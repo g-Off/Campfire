@@ -21,5 +21,8 @@
 @property (strong) NSDate *updatedAt;
 @property (strong) NSDate *createdAt;
 @property (strong) NSArray *users;
+@property (assign, getter = isLocked) BOOL locked;
+
+- (void)updateWithRoom:(GFCampfireRoom *)room;
 
 @end

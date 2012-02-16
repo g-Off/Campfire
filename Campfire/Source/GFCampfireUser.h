@@ -25,4 +25,6 @@ typedef enum {
 @property (assign) NSInteger userId;
 @property (strong) NSString *apiAuthToken;
 
+- (void)updateWithUser:(GFCampfireUser *)user;
+
 @end

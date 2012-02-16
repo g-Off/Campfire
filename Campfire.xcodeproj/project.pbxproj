@@ -93,7 +93,7 @@
 		6C7F494914E4D8C900B49AE4 /* DispatchQueueLogFormatter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DispatchQueueLogFormatter.h; sourceTree = "<group>"; };
 		6C7F494A14E4D8C900B49AE4 /* DispatchQueueLogFormatter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DispatchQueueLogFormatter.m; sourceTree = "<group>"; };
 		6C7F494B14E4D8C900B49AE4 /* README.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
-		6C7F498114E6DF0500B49AE4 /* libMKNetworkKit-OSX.a */ = {isa = PBXFileReference; lastKnownFileType = file; name = "libMKNetworkKit-OSX.a"; path = "MKNetworkKit/MKNetworkKit-OSX/build/Release/libMKNetworkKit-OSX.a"; sourceTree = "<group>"; };
+		6C7F498114E6DF0500B49AE4 /* libMKNetworkKit-OSX.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libMKNetworkKit-OSX.a"; path = "MKNetworkKit/MKNetworkKit-OSX/build/Release/libMKNetworkKit-OSX.a"; sourceTree = "<group>"; };
 		6C7F498414E6EC9200B49AE4 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		6C7F498614E6ECA700B49AE4 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		6C7F498814E7315900B49AE4 /* GFJSONObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFJSONObject.h; sourceTree = "<group>"; };

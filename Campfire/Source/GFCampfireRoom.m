@@ -20,6 +20,7 @@
 @synthesize updatedAt;
 @synthesize createdAt;
 @synthesize users;
+@synthesize locked;
 
 /*
  {
@@ -44,11 +45,40 @@
 	self.topic = [dict objectForKey:@"topic"];
 	self.membershipLimit = [(NSNumber *)[dict objectForKey:@"membership_limit"] integerValue];
 //	self.full;
-	self.openToGuests = ![(NSNumber *)[dict objectForKey:@"locked"] boolValue];
+	self.openToGuests = [(NSNumber *)[dict objectForKey:@"open_to_guests"] boolValue];
 //	self.activeTokenValue;
 //	self.updatedAt;
 //	self.createdAt;
-//	self.users;
+	NSArray *usersArray = [dict objectForKey:@"users"];
+	if (usersArray) {
+		NSDictionary *usersDict = [NSDictionary dictionaryWithObject:usersArray forKey:@"users"];
+		self.users = [GFJSONObject objectWithDictionary:usersDict];
+	}
+	self.locked = [(NSNumber *)[dict objectForKey:@"locked"] boolValue];
+}
+
+- (void)updateWithObject:(GFJSONObject *)obj
+{
+	if ([self isKindOfClass:[self class]]) {
+		[self updateWithRoom:(GFCampfireRoom *)obj];
+	}
+}
+
+- (void)updateWithRoom:(GFCampfireRoom *)room
+{
+	if (self.roomId != room.roomId) {
+		return;
+	}
+	self.name = room.name;
+	self.topic = room.topic;
+	self.membershipLimit = room.membershipLimit;
+	self.full = room.full;
+	self.openToGuests = room.openToGuests;
+	self.activeTokenValue = room.activeTokenValue;
+	self.updatedAt = room.updatedAt;
+	self.createdAt = room.createdAt;
+	self.users = room.users;
+	self.locked = room.locked;
 }
 
 @end

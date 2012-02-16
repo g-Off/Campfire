@@ -13,7 +13,11 @@
 + (void)registerClassPrefix:(NSString *)prefix;
 
 + (id)objectWithDictionary:(NSDictionary *)dict;
+
 - (id)initWithDictionary:(NSDictionary *)dict;
+
 - (void)updateWithDictionary:(NSDictionary *)dict;
+
+- (void)updateWithObject:(GFJSONObject *)obj;
 
 @end

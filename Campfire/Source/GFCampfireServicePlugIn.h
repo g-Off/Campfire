@@ -12,7 +12,6 @@
 @interface GFCampfireServicePlugIn : NSObject <IMServicePlugIn,
 IMServicePlugInGroupListSupport,
 IMServicePlugInGroupListHandlePictureSupport,
-IMServicePlugInInstantMessagingSupport,
 IMServicePlugInChatRoomSupport,
 IMServicePlugInPresenceSupport>
 

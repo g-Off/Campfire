@@ -56,4 +56,26 @@
 	self.apiAuthToken = [dict objectForKey:@"api_auth_token"];
 }
 
+- (void)updateWithObject:(GFCampfireUser *)obj
+{
+	if ([self isKindOfClass:[self class]]) {
+		[self updateWithUser:(GFCampfireUser *)obj];
+	}
+}
+
+- (void)updateWithUser:(GFCampfireUser *)user
+{
+	if (self.userId != user.userId) {
+		return;
+	}
+	self.name = user.name;
+	self.emailAddress = user.emailAddress;
+	self.admin = user.admin;
+	self.createdAt = user.createdAt;
+	self.type = user.type;
+	self.avatar = user.avatar;
+	
+	self.apiAuthToken = user.apiAuthToken;
+}
+
 @end

@@ -26,7 +26,6 @@
 	<string></string>
 	<key>IMServiceCapabilities</key>
 	<array>
-		<string>IMServiceCapabilityInstantMessagingSupport</string>
 		<string>IMServiceCapabilityChatRoomSupport</string>
 		<string>IMServiceCapabilityGroupListSupport</string>
 		<string>IMServiceCapabilityGroupListHandlePictureSupport</string>
