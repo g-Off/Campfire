@@ -68,6 +68,11 @@
 	if (self.userId != user.userId) {
 		return;
 	}
+	
+	if (self == user) {
+		return;
+	}
+	
 	self.name = user.name;
 	self.emailAddress = user.emailAddress;
 	self.admin = user.admin;
@@ -76,6 +81,21 @@
 	self.avatar = user.avatar;
 	
 	self.apiAuthToken = user.apiAuthToken;
+}
+
+- (NSString *)userKey
+{
+	return [[NSNumber numberWithInteger:self.userId] stringValue];
+}
+
+- (NSUInteger)hash
+{
+	return self.userId;
+}
+
+- (BOOL)isEqual:(id)object
+{
+	return [object isKindOfClass:[self class]] && self.userId == ((GFCampfireUser *)object).userId;
 }
 
 @end

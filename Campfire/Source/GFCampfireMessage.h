@@ -7,8 +7,10 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "GFJSONObject.h"
 
 typedef enum {
+	GFCampfireMessageTypeUnknown = -1,
 	GFCampfireMessageTypeText,
 	GFCampfireMessageTypePaste,
 	GFCampfireMessageTypeSound,
@@ -41,7 +43,7 @@ typedef enum {
 </message>
 */
 
-@interface GFCampfireMessage : NSObject
+@interface GFCampfireMessage : GFJSONObject
 
 @property (assign) NSInteger messageId;
 @property (assign) NSInteger roomId;
@@ -50,5 +52,7 @@ typedef enum {
 @property (strong) NSDate *createdAt;
 @property (assign) GFCampfireMessageType type;
 @property (assign, getter = isStarred) BOOL starred;
+
+- (void)updateWithMessage:(GFCampfireMessage *)message;
 
 @end

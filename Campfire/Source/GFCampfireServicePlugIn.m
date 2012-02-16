@@ -15,12 +15,25 @@
 #import "GFJSONObject.h"
 #import "GFCampfireUser.h"
 #import "GFCampfireRoom.h"
+#import "GFCampfireMessage.h"
 
 static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 @interface GFCampfireServicePlugIn ()
 
+- (void)updateInformationForRoom:(GFCampfireRoom *)room;
 - (void)updateAllRoomsInformation;
+- (void)updateUserRooms;
+
+- (void)getRoom:(NSString *)roomId;
+
+- (void)updateAllUsersInformation;
+- (void)updateInformationForUserId:(NSString *)userKey;
+- (void)updateInformationForUser:(GFCampfireUser *)user;
+
+- (void)didJoinRoom:(NSString *)roomId;
+
+- (void)getRecentMessagesForRoom:(NSString *)roomId sinceMessage:(NSString *)messageId;
 
 @end
 
@@ -36,6 +49,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	GFCampfireUser *_me;
 	
 	NSMutableDictionary *_rooms;
+	NSMutableDictionary *_activeRooms;
 	NSMutableDictionary *_users;
 }
 
@@ -50,12 +64,14 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 #pragma mark -
 #pragma mark IMServicePlugIn
 
-- (id)initWithServiceApplication:(id <IMServiceApplication>)aServiceApplication
+- (id)initWithServiceApplication:(id <IMServiceApplication, IMServiceApplicationGroupListSupport, IMServiceApplicationChatRoomSupport>)aServiceApplication
 {
 	if ((self = [super init])) {
 		serviceApplication = aServiceApplication;
 		
 		_rooms = [[NSMutableDictionary alloc] init];
+		_activeRooms = [[NSMutableDictionary alloc] init];
+		_users = [[NSMutableDictionary alloc] init];
 	}
 	
 	return self;
@@ -78,9 +94,9 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	[loginOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 		id json = [completedOperation responseJSON];
 		_me = [GFJSONObject objectWithDictionary:json];
+		[self updateUserRooms];
 		[serviceApplication plugInDidLogIn];
 	} onError:^(NSError *error) {
-		NSLog(@"%@", error);
 		[serviceApplication plugInDidFailToAuthenticate];
 	}];
 	[_networkEngine enqueueOperation:loginOperation forceReload:YES];
@@ -94,9 +110,26 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 #pragma mark -
 #pragma mark IMServicePlugInChatRoomSupport
 
-- (oneway void)joinChatRoom:(NSString *)roomName
+- (oneway void)joinChatRoom:(NSString *)roomId
 {
-	
+	if (_me && _me.apiAuthToken) { 
+		if ([_activeRooms objectForKey:roomId] == nil) {
+			MKNetworkOperation *joinRoomOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/join.json", roomId] params:nil httpMethod:@"POST" ssl:_useSSL];
+			[joinRoomOperation setUsername:_me.apiAuthToken	password:@"X" basicAuth:YES];
+			[joinRoomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+				[self didJoinRoom:roomId];
+			} onError:^(NSError *error) {
+				if ([_activeRooms objectForKey:roomId] == nil) {
+					[serviceApplication plugInDidLeaveChatRoom:roomId error:error];
+				} else {
+					[self didJoinRoom:roomId];
+				}
+			}];
+			[_networkEngine enqueueOperation:joinRoomOperation forceReload:YES];
+		} else {
+			[self didJoinRoom:roomId];
+		}
+	}
 }
 
 - (oneway void)leaveChatRoom:(NSString *)roomName
@@ -106,7 +139,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 - (oneway void)inviteHandles:(NSArray *)handles toChatRoom:(NSString *)roomName withMessage:(IMServicePlugInMessage *)message
 {
-	
+	NSLog(@"%@", handles);
 }
 
 - (oneway void)sendMessage:(IMServicePlugInMessage *)message toChatRoom:(NSString *)roomName
@@ -120,45 +153,58 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 }
 
 #pragma mark -
+#pragma mark IMServicePlugInGroupListHandlePictureSupport
+
+- (oneway void)requestPictureForHandle:(NSString *)handle withIdentifier:(NSString *)identifier
+{
+	GFCampfireUser *user = [_users objectForKey:identifier];
+	if (user) {
+		
+	} else {
+//		[serviceApplication plugInDidUpdateProperties:<#(NSDictionary *)#> ofHandle:<#(NSString *)#>];
+	}
+}
+
+#pragma mark -
 #pragma mark IMServicePlugInGroupListSupport
 
 - (oneway void)requestGroupList
 {
-	if (_me && _me.apiAuthToken) {
-		MKNetworkOperation *groupListOperation = [_networkEngine operationWithPath:@"rooms.json" params:nil httpMethod:@"GET" ssl:_useSSL];
-		[groupListOperation setUsername:_me.apiAuthToken	password:@"X" basicAuth:YES];
-		[groupListOperation onCompletion:^(MKNetworkOperation *completedOperation) {
-			id json = [completedOperation responseJSON];
-			NSArray *allRooms = [GFJSONObject objectWithDictionary:json];
-			
-			for (GFCampfireRoom *room in allRooms) {
-				NSString *roomKey = [[NSNumber numberWithInteger:room.roomId] stringValue];
-				GFCampfireRoom *existingRoom = [_rooms objectForKey:roomKey];
-				if (existingRoom) {
-					// update existing room
-				} else {
-					[_rooms setObject:room forKey:roomKey];
-				}
-			}
-			
-			NSMutableDictionary *campfireGroup = [NSMutableDictionary dictionary];
-			
-			NSMutableArray *handles = [NSMutableArray array];
-			for (GFCampfireRoom *room in _rooms.objectEnumerator) {
-				NSString *handle = [[NSNumber numberWithInteger:room.roomId] stringValue];
-				[handles addObject:handle];
-			}
-			
-			[campfireGroup setObject:handles forKey:IMGroupListHandlesKey];
-			[campfireGroup setObject:IMGroupListDefaultGroup forKey:IMGroupListNameKey];
-			
-			[serviceApplication plugInDidUpdateGroupList:[NSArray arrayWithObject:campfireGroup] error:nil];
-			[self updateAllRoomsInformation];
-		} onError:^(NSError *error) {
-			[serviceApplication plugInDidUpdateGroupList:nil error:error];
-		}];
-		[_networkEngine enqueueOperation:groupListOperation forceReload:YES];
-	}
+//	if (_me && _me.apiAuthToken) {
+//		MKNetworkOperation *groupListOperation = [_networkEngine operationWithPath:@"rooms.json" params:nil httpMethod:@"GET" ssl:_useSSL];
+//		[groupListOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
+//		[groupListOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+//			id json = [completedOperation responseJSON];
+//			NSArray *allRooms = [GFJSONObject objectWithDictionary:json];
+//			
+//			for (GFCampfireRoom *room in allRooms) {
+//				GFCampfireRoom *existingRoom = [_rooms objectForKey:room.roomKey];
+//				if (existingRoom) {
+//					// update existing room
+//				} else {
+//					[_rooms setObject:room forKey:room.roomKey];
+//				}
+//			}
+//			
+//			NSMutableDictionary *campfireGroup = [NSMutableDictionary dictionary];
+//			
+//			NSMutableArray *handles = [NSMutableArray array];
+//			for (GFCampfireRoom *room in _rooms.objectEnumerator) {
+//				NSString *handle = [[NSNumber numberWithInteger:room.roomId] stringValue];
+//				[handles addObject:handle];
+//			}
+//			
+//			[campfireGroup setObject:handles forKey:IMGroupListHandlesKey];
+//			[campfireGroup setObject:IMGroupListDefaultGroup forKey:IMGroupListNameKey];
+//			
+//			[serviceApplication plugInDidUpdateGroupList:[NSArray arrayWithObject:campfireGroup] error:nil];
+//			[self updateAllRoomsInformation];
+//		} onError:^(NSError *error) {
+//			[serviceApplication plugInDidUpdateGroupList:nil error:error];
+//		}];
+//		[_networkEngine enqueueOperation:groupListOperation forceReload:YES];
+//	}
+//	[self updateUserRooms];
 }
 
 #pragma mark -
@@ -187,9 +233,9 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		NSMutableDictionary *properties = [NSMutableDictionary dictionary];
 		NSNumber *roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityAvailable];
 		if (room.locked) {
-			
+			roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityOffline];
 		} else if (room.full) {
-			
+			roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityAway];
 		}
 		
 		[properties setObject:roomStatus forKey:IMHandlePropertyAvailability];
@@ -219,16 +265,16 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 {
 	if (_me && _me.apiAuthToken) {
 		MKNetworkOperation *usersRooms = [_networkEngine operationWithPath:@"presence.json" params:nil httpMethod:@"GET" ssl:_useSSL];
-		[usersRooms setUsername:_me.apiAuthToken	password:@"X" basicAuth:YES];
+		[usersRooms setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
 		[usersRooms onCompletion:^(MKNetworkOperation *completedOperation) {
 			id json = [completedOperation responseJSON];
 			NSArray *usersRooms = [GFJSONObject objectWithDictionary:json];
 			
 			for (GFCampfireRoom *room in usersRooms) {
-				// should be joining the chat rooms here
+				[_activeRooms setObject:room forKey:room.roomKey];
+				[self updateInformationForRoom:room];
 			}
 		} onError:^(NSError *error) {
-//			[serviceApplication plugInDidUpdateGroupList:nil error:error];
 		}];
 		[_networkEngine enqueueOperation:usersRooms forceReload:YES];
 	}
@@ -242,13 +288,137 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		[roomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 			id json = [completedOperation responseJSON];
 			GFCampfireRoom *room = [GFJSONObject objectWithDictionary:json];
-			
-//			[serviceApplication handles:<#(NSArray *)#> didJoinChatRoom:<#(NSString *)#>];
-//			[serviceApplication handles:<#(NSArray *)#> didLeaveChatRoom:<#(NSString *)#>];
+			[self updateInformationForRoom:room];
 		} onError:^(NSError *error) {
 //			[serviceApplication plugInDidUpdateGroupList:nil error:error];
 		}];
 		[_networkEngine enqueueOperation:roomOperation forceReload:YES];
+	}
+}
+- (void)didJoinRoom:(NSString *)roomId
+{
+	GFCampfireRoom *room = [_rooms objectForKey:roomId];
+	if (room) {
+		[_activeRooms setObject:room forKey:room.roomKey];
+		
+		// TODO: open streaming API
+		[self getRoom:roomId];
+		[self getRecentMessagesForRoom:roomId sinceMessage:nil];
+		
+		[serviceApplication plugInDidJoinChatRoom:roomId];
+	}
+}
+
+- (void)getRecentMessagesForRoom:(NSString *)roomId sinceMessage:(NSString *)messageId
+{
+	if (_me && _me.apiAuthToken) {
+		NSMutableDictionary *params = nil;
+		if (messageId) {
+			params = [NSMutableDictionary dictionaryWithObject:messageId forKey:@"since_message_id"];
+		}
+		MKNetworkOperation *recentMessagesOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/recent.json", roomId] params:params httpMethod:@"GET" ssl:_useSSL];
+		[recentMessagesOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
+		[recentMessagesOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+			id json = [completedOperation responseJSON];
+			NSArray *messages = [GFJSONObject objectWithDictionary:json];
+			
+			for (GFCampfireMessage *message in messages) {
+				if (message.body && message.userId != NSNotFound) {
+					NSMutableAttributedString *messageString = [[NSMutableAttributedString alloc] initWithString:message.body];
+					IMServicePlugInMessage *pluginMessage = [IMServicePlugInMessage servicePlugInMessageWithContent:messageString];
+					NSString *handle = [[NSNumber numberWithInteger:message.userId] stringValue];
+					[serviceApplication plugInDidReceiveMessage:pluginMessage forChatRoom:roomId fromHandle:handle];
+				}
+			}
+		} onError:^(NSError *error) {
+			// couldn't fetch recents, do I care?
+		}];
+		[_networkEngine enqueueOperation:recentMessagesOperation forceReload:YES];
+	}
+}
+
+- (void)updateInformationForRoom:(GFCampfireRoom *)room
+{
+	BOOL triggersUpdate = NO;
+	
+	NSMutableSet *joinedUsers = nil;
+	NSMutableSet *departedUsers = nil;
+	
+	GFCampfireRoom *existingRoom = [_rooms objectForKey:room.roomKey];
+	if (existingRoom) {
+		if (existingRoom != room) {
+			if (room.users != nil) {
+				joinedUsers = [NSMutableSet setWithArray:room.users];
+				[joinedUsers minusSet:[NSSet setWithArray:existingRoom.users]];
+				
+				departedUsers = [NSMutableSet setWithArray:existingRoom.users];
+				[departedUsers minusSet:[NSSet setWithArray:room.users]];
+				
+			}
+			
+			[existingRoom updateWithRoom:room];
+			triggersUpdate = YES;
+		}
+	} else {
+		[_rooms setObject:room forKey:room.roomKey];
+		triggersUpdate = YES;
+	}
+	
+	if (triggersUpdate) {
+		[serviceApplication handles:[joinedUsers allObjects] didJoinChatRoom:room.roomKey];
+		[serviceApplication handles:[departedUsers allObjects] didLeaveChatRoom:room.roomKey];
+		
+		[self updateAllUsersInformation];
+	}
+}
+
+- (void)updateAllUsersInformation
+{
+	for (GFCampfireUser *user in _users.objectEnumerator) {
+		[self updateInformationForUser:user];
+	}
+}
+
+- (void)updateInformationForUser:(GFCampfireUser *)user
+{
+	BOOL triggersUpdate = NO;
+	GFCampfireUser *existingUser = [_users objectForKey:user.userKey];
+	if (existingUser) {
+		if (existingUser != user) {
+			[existingUser updateWithUser:user];
+			triggersUpdate = YES;
+		}
+	} else {
+		triggersUpdate = YES;
+		[_users setObject:user forKey:user.userKey];
+	}
+	
+	if (triggersUpdate) {
+		NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
+		[userInfo setObject:user.name forKey:IMHandlePropertyAlias];
+		[userInfo setObject:user.emailAddress forKey:IMHandlePropertyEmailAddress];
+		[userInfo setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, nil] forKey:IMHandlePropertyCapabilities];
+		
+		// TODO: IMHandlePropertyPictureIdentifier
+		
+		NSInteger userStatus = IMHandleAvailabilityUnknown;
+		for (GFCampfireRoom *room in _rooms.objectEnumerator) {
+			if ([room.users indexOfObject:user] != NSNotFound) {
+				userStatus = IMHandleAvailabilityAvailable;
+				break;
+			}
+		}
+		[userInfo setObject:[NSNumber numberWithInteger:userStatus] forKey:IMHandlePropertyAvailability];
+		
+		[serviceApplication plugInDidUpdateProperties:userInfo ofHandle:user.userKey];
+	}
+}
+
+- (void)updateInformationForUserId:(NSString *)userKey
+{
+	GFCampfireUser *user = [_users objectForKey:userKey];
+	if (user) {
+		[self updateInformationForUser:user];
 	}
 }
 

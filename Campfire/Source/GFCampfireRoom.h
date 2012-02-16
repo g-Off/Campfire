@@ -25,4 +25,6 @@
 
 - (void)updateWithRoom:(GFCampfireRoom *)room;
 
+- (NSString *)roomKey;
+
 @end

@@ -69,6 +69,11 @@
 	if (self.roomId != room.roomId) {
 		return;
 	}
+	
+	if (self == room) {
+		return;
+	}
+	
 	self.name = room.name;
 	self.topic = room.topic;
 	self.membershipLimit = room.membershipLimit;
@@ -79,6 +84,11 @@
 	self.createdAt = room.createdAt;
 	self.users = room.users;
 	self.locked = room.locked;
+}
+
+- (NSString *)roomKey
+{
+	return [[NSNumber numberWithInteger:self.roomId] stringValue];
 }
 
 @end
