@@ -7,25 +7,14 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "GFJSONObject.h"
 
 typedef enum {
 	GFCampfireUserTypeMember,
 	GFCampfireUserTypeGuest,
 } GFCampfireUserType;
 
-/*
- <user>
-	 <id type="integer">1</id>
-	 <name>Jason Fried</name>
-	 <email-address>jason@37signals.com</email-address>
-	 <admin type="boolean">true</admin>
-	 <created-at type="datetime">2009-11-20T16:41:39Z</created-at>
-	 <type>Member</type>
-	 <avatar-url>https://asset0.37img.com/global/.../avatar.png</avatar-url>
- </user>
-*/
-
-@interface GFCampfireUser : NSObject
+@interface GFCampfireUser : GFJSONObject
 
 @property (strong) NSString *name;
 @property (strong) NSString *emailAddress;

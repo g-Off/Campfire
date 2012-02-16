@@ -12,6 +12,7 @@
 
 #import <MKNetworkKit/MKNetworkKit.h>
 
+#import "GFJSONObject.h"
 #import "GFCampfireUser.h"
 
 static const int ddLogLevel = LOG_LEVEL_VERBOSE;
@@ -34,6 +35,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 {
 	if (self == [GFCampfireServicePlugIn class]) {
 		[DDLog addLogger:[DDASLLogger sharedInstance]];
+		[GFJSONObject registerClassPrefix:@"GFCampfire"];
 	}
 }
 
@@ -78,8 +80,11 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	[loginOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 		id json = [completedOperation responseJSON];
 		NSLog(@"%@", json);
+		me = [GFJSONObject objectWithDictionary:json];
+		[serviceApplication plugInDidLogIn];
 	} onError:^(NSError *error) {
 		NSLog(@"%@", error);
+		[serviceApplication plugInDidFailToAuthenticate];
 	}];
 //	[loginOperation setAuthHandler:(MKNKAuthBlock)authHandler];
 	[networkEngine enqueueOperation:loginOperation forceReload:YES];
@@ -87,7 +92,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 - (oneway void)logout
 {
-	
+	[serviceApplication plugInDidLogOutWithError:nil reconnect:NO];
 }
 
 #pragma mark -
@@ -117,5 +122,29 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 {
 	
 }
+
+#pragma mark -
+#pragma mark IMServicePlugInGroupListSupport
+
+- (oneway void)requestGroupList
+{
+	
+}
+
+#pragma mark -
+#pragma mark IMServicePlugInPresenceSupport
+
+- (oneway void)updateSessionProperties:(NSDictionary *)properties
+{
+	/*
+	 Available keys include:
+	 IMSessionPropertyAvailability   - the user's availablility
+	 IMSessionPropertyStatusMessage  - the user's status message
+	 IMSessionPropertyPictureData    - the user's icon
+	 IMSessionPropertyIdleDate       - the time of the last user activity
+	 IMSessionPropertyIsInvisible    - If YES, the user wishes to appear offline to other users
+	 */
+}
+
 
 @end
