@@ -117,7 +117,7 @@
 			if ([obj isKindOfClass:[NSArray class]]) {
 				NSArray *objArray = obj;
 				NSMutableArray *objects = [NSMutableArray arrayWithCapacity:[objArray count]];
-				for (id jsonObj in objects) {
+				for (id jsonObj in objArray) {
 					if ([jsonObj isKindOfClass:[NSDictionary class]]) {
 						NSDictionary *objectDict = jsonObj;
 						[objects addObject:[[objectClass alloc] initWithDictionary:objectDict]];

@@ -14,11 +14,12 @@
 
 #import "GFJSONObject.h"
 #import "GFCampfireUser.h"
+#import "GFCampfireRoom.h"
 
 static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 @implementation GFCampfireServicePlugIn {
-	id <IMServiceApplication> serviceApplication;
+	id <IMServiceApplication, IMServiceApplicationGroupListSupport> serviceApplication;
 	NSString *username;
 	NSString *password;
 	NSString *server;
@@ -86,7 +87,6 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		NSLog(@"%@", error);
 		[serviceApplication plugInDidFailToAuthenticate];
 	}];
-//	[loginOperation setAuthHandler:(MKNKAuthBlock)authHandler];
 	[networkEngine enqueueOperation:loginOperation forceReload:YES];
 }
 
@@ -128,7 +128,25 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 - (oneway void)requestGroupList
 {
-	
+	MKNetworkOperation *loginOperation = [networkEngine operationWithPath:@"rooms.json" params:nil httpMethod:@"GET" ssl:useSSL];
+	[loginOperation setUsername:me.apiAuthToken	password:@"X" basicAuth:YES];
+	[loginOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+		id json = [completedOperation responseJSON];
+		NSLog(@"%@", json);
+		NSArray *rooms = [GFJSONObject objectWithDictionary:json];
+		NSMutableArray *groupList = [NSMutableArray array];
+		for (GFCampfireRoom *room in rooms) {
+			NSMutableDictionary *roomDict = [NSMutableDictionary dictionary];
+			[roomDict setObject:room.name forKey:IMGroupListNameKey];
+			[groupList addObject:roomDict];
+		}
+		NSLog(@"%@", rooms);
+		[serviceApplication plugInDidUpdateGroupList:groupList error:nil];
+	} onError:^(NSError *error) {
+		NSLog(@"%@", error);
+		[serviceApplication plugInDidUpdateGroupList:nil error:error];
+	}];
+	[networkEngine enqueueOperation:loginOperation forceReload:YES];
 }
 
 #pragma mark -
