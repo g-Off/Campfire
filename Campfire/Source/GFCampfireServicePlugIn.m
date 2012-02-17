@@ -145,7 +145,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 - (oneway void)leaveChatRoom:(NSString *)roomId
 {
-	if (_me && _me.apiAuthToken) { 
+	if (_me && _me.apiAuthToken) {
 		if ([_activeRooms objectForKey:roomId] != nil) {
 			MKNetworkOperation *leaveRoomOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/leave.json", roomId] params:[NSMutableDictionary dictionaryWithObject:@"" forKey:@""] httpMethod:@"POST" ssl:_useSSL];
 			[leaveRoomOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];

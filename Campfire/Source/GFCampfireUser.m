@@ -80,7 +80,9 @@
 	self.type = user.type;
 	self.avatar = user.avatar;
 	
-	self.apiAuthToken = user.apiAuthToken;
+	if (user.apiAuthToken) {
+		self.apiAuthToken = user.apiAuthToken;
+	}
 }
 
 - (NSString *)userKey
