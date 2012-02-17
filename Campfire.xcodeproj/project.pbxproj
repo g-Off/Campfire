@@ -43,6 +43,7 @@
 		6C7F498514E6EC9200B49AE4 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C7F498414E6EC9200B49AE4 /* Security.framework */; };
 		6C7F498714E6ECA700B49AE4 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C7F498614E6ECA700B49AE4 /* SystemConfiguration.framework */; };
 		6C7F498A14E7315900B49AE4 /* GFJSONObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C7F498914E7315900B49AE4 /* GFJSONObject.m */; };
+		6C9C717314EEB5700046AB0E /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C9C717214EEB5700046AB0E /* GCDAsyncSocket.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -101,6 +102,8 @@
 		6C7F498614E6ECA700B49AE4 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		6C7F498814E7315900B49AE4 /* GFJSONObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFJSONObject.h; sourceTree = "<group>"; };
 		6C7F498914E7315900B49AE4 /* GFJSONObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFJSONObject.m; sourceTree = "<group>"; };
+		6C9C717114EEB5700046AB0E /* GCDAsyncSocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GCDAsyncSocket.h; sourceTree = "<group>"; };
+		6C9C717214EEB5700046AB0E /* GCDAsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GCDAsyncSocket.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -218,6 +221,8 @@
 		6C47C19E14DE02E600AF16FA /* Source */ = {
 			isa = PBXGroup;
 			children = (
+				6C9C717114EEB5700046AB0E /* GCDAsyncSocket.h */,
+				6C9C717214EEB5700046AB0E /* GCDAsyncSocket.m */,
 				6C7F493B14E4D8C900B49AE4 /* Lumberjack */,
 				6C0F232814DF0416003F104C /* GFCampfireMessage.h */,
 				6C0F232914DF0417003F104C /* GFCampfireMessage.m */,
@@ -392,6 +397,7 @@
 				6C7F495214E4D8C900B49AE4 /* DispatchQueueLogFormatter.m in Sources */,
 				6C7F498A14E7315900B49AE4 /* GFJSONObject.m in Sources */,
 				6C5A883F14EDEA250058592F /* GFCampfireOperation.m in Sources */,
+				6C9C717314EEB5700046AB0E /* GCDAsyncSocket.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

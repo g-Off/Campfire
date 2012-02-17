@@ -9,6 +9,7 @@
 #import "GFCampfireServicePlugIn.h"
 #import "DDLog.h"
 #import "DDASLLogger.h"
+#import "DDTTYLogger.h"
 
 #import <MKNetworkKit/MKNetworkKit.h>
 
@@ -19,9 +20,11 @@
 
 #import "GFCampfireOperation.h"
 
+#import "GCDAsyncSocket.h"
+
 static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
-@interface GFCampfireServicePlugIn ()
+@interface GFCampfireServicePlugIn () <GCDAsyncSocketDelegate>
 
 - (void)updateInformationForRoom:(GFCampfireRoom *)room;
 - (void)updateAllRoomsInformation;
@@ -41,6 +44,12 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 - (void)getRemoteUserInfo:(NSString *)userId;
 
 - (void)processMessages:(NSArray *)messages;
+- (void)processMessage:(GFCampfireMessage *)message;
+
+- (void)startStreamingRoom:(NSString *)roomId;
+- (void)stopStreamingRoom:(NSString *)roomId;
+
+- (NSString *)roomIdForSocket:(GCDAsyncSocket *)socket;
 
 @end
 
@@ -58,12 +67,15 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	NSMutableDictionary *_rooms;
 	NSMutableDictionary *_activeRooms;
 	NSMutableDictionary *_users;
+	
+	NSMutableDictionary *_chats;
 }
 
 + (void)initialize
 {
 	if (self == [GFCampfireServicePlugIn class]) {
 		[DDLog addLogger:[DDASLLogger sharedInstance]];
+		[DDLog addLogger:[DDTTYLogger sharedInstance]];
 		[GFJSONObject registerClassPrefix:@"GFCampfire"];
 	}
 }
@@ -79,6 +91,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		_rooms = [[NSMutableDictionary alloc] init];
 		_activeRooms = [[NSMutableDictionary alloc] init];
 		_users = [[NSMutableDictionary alloc] init];
+		_chats = [[NSMutableDictionary alloc] init];
 	}
 	
 	return self;
@@ -150,18 +163,22 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 			MKNetworkOperation *leaveRoomOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/leave.json", roomId] params:[NSMutableDictionary dictionaryWithObject:@"" forKey:@""] httpMethod:@"POST" ssl:_useSSL];
 			[leaveRoomOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
 			[leaveRoomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
-				[serviceApplication plugInDidLeaveChatRoom:roomId error:nil];
-				[_activeRooms removeObjectForKey:roomId];
+				[self didLeaveRoom:roomId];
 			} onError:^(NSError *error) {
-				[serviceApplication plugInDidLeaveChatRoom:roomId error:error];
-				[_activeRooms removeObjectForKey:roomId];
+				[self didLeaveRoom:roomId];
 			}];
 			[_networkEngine enqueueOperation:leaveRoomOperation forceReload:YES];
 		} else {
-			[serviceApplication plugInDidLeaveChatRoom:roomId error:nil];
-			[_activeRooms removeObjectForKey:roomId];
+			[self didLeaveRoom:roomId];
 		}
 	}
+}
+
+- (void)didLeaveRoom:(NSString *)roomId
+{
+	[self stopStreamingRoom:roomId];
+	[serviceApplication plugInDidLeaveChatRoom:roomId error:nil];
+	[_activeRooms removeObjectForKey:roomId];
 }
 
 - (oneway void)inviteHandles:(NSArray *)handles toChatRoom:(NSString *)roomName withMessage:(IMServicePlugInMessage *)message
@@ -373,7 +390,8 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	if (room) {
 		[_activeRooms setObject:room forKey:room.roomKey];
 		
-		// TODO: open streaming API
+		[self startStreamingRoom:roomId];
+		
 		[self getRoom:roomId];
 		[self getRecentMessagesForRoom:roomId sinceMessage:nil];
 		
@@ -405,17 +423,22 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 - (void)processMessages:(NSArray *)messages
 {
 	for (GFCampfireMessage *message in messages) {
-		if (message.body && message.userId != NSNotFound) {
-			// TODO: adjust things based on message types
-			NSMutableAttributedString *messageString = [[NSMutableAttributedString alloc] initWithString:message.body];
-			IMServicePlugInMessage *pluginMessage = [IMServicePlugInMessage servicePlugInMessageWithContent:messageString];
-			NSString *userId = [[NSNumber numberWithInteger:message.userId] stringValue];
-			NSString *roomId = [[NSNumber numberWithInteger:message.roomId] stringValue];
-			
-			// TODO: do a join based on userId, then when we see a LeaveMessage (maybe KickMessage) depart room, and rejoin for EnterMessage
-			[self getRemoteUserInfo:userId];
-			[serviceApplication plugInDidReceiveMessage:pluginMessage forChatRoom:roomId fromHandle:userId];
-		}
+		[self processMessage:message];
+	}
+}
+
+- (void)processMessage:(GFCampfireMessage *)message
+{
+	if (message.body && message.userId != NSNotFound) {
+		// TODO: adjust things based on message types
+		NSMutableAttributedString *messageString = [[NSMutableAttributedString alloc] initWithString:message.body];
+		IMServicePlugInMessage *pluginMessage = [IMServicePlugInMessage servicePlugInMessageWithContent:messageString];
+		NSString *userId = [[NSNumber numberWithInteger:message.userId] stringValue];
+		NSString *roomId = [[NSNumber numberWithInteger:message.roomId] stringValue];
+		
+		// TODO: do a join based on userId, then when we see a LeaveMessage (maybe KickMessage) depart room, and rejoin for EnterMessage
+		[self getRemoteUserInfo:userId];
+		[serviceApplication plugInDidReceiveMessage:pluginMessage forChatRoom:roomId fromHandle:userId];
 	}
 }
 
@@ -537,6 +560,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	}
 }
 
+
 - (void)streamRoom:(NSString *)roomId
 {
 	NSString *streamingPath = [NSString stringWithFormat:@"https://streaming.campfirenow.com/room/%@/live.json", roomId];
@@ -569,5 +593,122 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	}
 }
 
+- (void)startStreamingRoom:(NSString *)roomId
+{
+	NSString *host = @"streaming.campfirenow.com";
+	NSString *streamingPath = [NSString stringWithFormat:@"/room/%@/live.json", roomId];
+	
+	__strong GCDAsyncSocket *asyncSocket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:dispatch_get_main_queue()];
+	
+	[_chats setObject:asyncSocket forKey:roomId];
+	
+	uint16_t port = 0;
+	if (_useSSL) {
+		port = 443;
+	} else {
+		port = 80;
+	}
+	
+	NSError *error = nil;
+	if (![asyncSocket connectToHost:host onPort:port error:&error]) {
+		NSLog(@"Could not connect to %@", host);
+	} else {
+		NSLog(@"Connecting to %@...", host);
+	}
+	
+	if (_useSSL) {
+		NSDictionary *options = [NSDictionary dictionaryWithObject:[NSNumber numberWithBool:NO]
+															forKey:(NSString *)kCFStreamSSLValidatesCertificateChain];
+		
+		[asyncSocket startTLS:options];
+	}
+}
+
+- (void)stopStreamingRoom:(NSString *)roomId
+{
+	GCDAsyncSocket *asyncSocket = [_chats objectForKey:roomId];
+	if (asyncSocket) {
+		[asyncSocket disconnectAfterReadingAndWriting];
+	}
+}
+
+#pragma mark -
+#pragma mark GCDAsyncSocketDelegate
+
+- (void)socketDidSecure:(__unsafe_unretained GCDAsyncSocket *)sock
+{
+	NSLog(@"socket secured");
+}
+
+- (void)socket:(__unsafe_unretained GCDAsyncSocket *)socket didConnectToHost:(__unsafe_unretained NSString *)hostName port:(UInt16)port
+{
+	NSString *roomId = [self roomIdForSocket:socket];
+	if (roomId) {
+		NSURL *host = [NSURL URLWithString:@"https://streaming.campfirenow.com"];
+		NSString *streamingPath = [NSString stringWithFormat:@"room/%@/live.json", roomId];
+		NSURL *streamingURL = [host URLByAppendingPathComponent:streamingPath];
+		
+		CFHTTPMessageRef request = CFHTTPMessageCreateRequest(kCFAllocatorDefault, CFSTR("GET"), (__bridge CFURLRef)streamingURL, kCFHTTPVersion1_1);
+		
+		CFHTTPMessageSetHeaderFieldValue(request, CFSTR("Connection"), CFSTR("Keep-Alive"));
+		CFHTTPMessageSetHeaderFieldValue(request, CFSTR("Host"), CFSTR("streaming.campfirenow.com"));
+		CFHTTPMessageSetHeaderFieldValue(request, CFSTR("Accept"), CFSTR("*/*"));
+		
+		CFHTTPMessageAddAuthentication(request, NULL, (__bridge CFStringRef)_me.apiAuthToken, CFSTR("X"), kCFHTTPAuthenticationSchemeBasic, false);
+		
+		CFDataRef requestData = CFHTTPMessageCopySerializedMessage(request);
+		NSString *requestString = [[NSString alloc] initWithData:(__bridge NSData *)requestData encoding:NSUTF8StringEncoding];
+		NSLog(@"Stream header: %@", requestString);
+		
+		[socket writeData:(__bridge NSData *)requestData withTimeout:-1.0 tag:0];
+		
+		//	NSString *requestStr = @"HEAD / HTTP/1.0\r\nHost: deusty.com\r\nConnection: Close\r\n\r\n";
+		//	NSData *requestData = [requestStr dataUsingEncoding:NSUTF8StringEncoding];
+		//	
+		//	[sock writeData:requestData withTimeout:-1.0 tag:0];
+		
+		// ?
+		NSData *responseTerminatorData = [@"\r\n\r\n" dataUsingEncoding:NSASCIIStringEncoding];
+		[socket readDataToData:responseTerminatorData withTimeout:-1.0 tag:0];
+	}
+}
+
+- (void)socket:(__unsafe_unretained GCDAsyncSocket *)sock didReadData:(__unsafe_unretained NSData *)data withTag:(long)tag
+{
+	NSString *stringData = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+	if ([data isEqual:[GCDAsyncSocket CRLFData]]) {
+		// don't care, move on
+	} else if ([stringData isEqualToString:@"1\r\n"]) {
+		// also don't care, it's a "keep-alive" ?
+	} else {
+		NSError *error = nil;
+		id jsonObj = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
+		if (error == nil && jsonObj != nil) {
+			if ([jsonObj isKindOfClass:[NSArray class]]) {
+				GFJSONObject *campfireObj = [GFJSONObject objectWithDictionary:jsonObj];
+				if ([campfireObj isKindOfClass:[GFCampfireMessage class]]) {
+					[self processMessage:(GFCampfireMessage *)campfireObj];
+				}
+			}
+		}
+	}
+	
+	[sock readDataToData:[GCDAsyncSocket CRLFData] withTimeout:-1.0 tag:0];
+}
+
+- (void)socketDidDisconnect:(__unsafe_unretained GCDAsyncSocket *)sock withError:(__unsafe_unretained NSError *)err
+{
+	NSLog(@"Socket disconnected with error: %@", err);
+	NSString *roomId = [self roomIdForSocket:sock];
+	if (roomId) {
+		[serviceApplication plugInDidLeaveChatRoom:roomId error:err];
+	}
+}
+
+- (NSString *)roomIdForSocket:(__unsafe_unretained GCDAsyncSocket *)socket
+{
+	NSString *roomId = [[_chats allKeysForObject:socket] lastObject];
+	return roomId;
+}
 
 @end
