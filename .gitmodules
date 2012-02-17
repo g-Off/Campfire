@@ -4,3 +4,6 @@
 [submodule "MKNetworkKit"]
 	path = MKNetworkKit
 	url = git://github.com/MugunthKumar/MKNetworkKit.git
+[submodule "AFNetworking"]
+	path = AFNetworking
+	url = git://github.com/AFNetworking/AFNetworking.git
