@@ -17,13 +17,16 @@
 #import "GFCampfireRoom.h"
 #import "GFCampfireMessage.h"
 
+#import "GFCampfireOperation.h"
+
 static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 @interface GFCampfireServicePlugIn ()
 
 - (void)updateInformationForRoom:(GFCampfireRoom *)room;
 - (void)updateAllRoomsInformation;
-- (void)updateUserRooms;
+- (void)getUserRooms;
+- (void)getAllRooms;
 
 - (void)getRoom:(NSString *)roomId;
 
@@ -89,6 +92,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	_useSSL = [[accountSettings objectForKey:IMAccountSettingUsesSSL] boolValue];
 	
 	_networkEngine = [[MKNetworkEngine alloc] initWithHostName:_server customHeaderFields:nil];
+	[_networkEngine performSelector:@selector(setCustomOperationSubclass:) withObject:[GFCampfireOperation class]];
 }
 
 - (oneway void)login
@@ -99,7 +103,8 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		id json = [completedOperation responseJSON];
 		_me = [GFJSONObject objectWithDictionary:json];
 		[self updateInformationForUser:_me];
-		[self updateUserRooms];
+		[self getAllRooms];
+		[self getUserRooms];
 		[serviceApplication plugInDidLogIn];
 	} onError:^(NSError *error) {
 		[serviceApplication plugInDidFailToAuthenticate];
@@ -110,6 +115,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 - (oneway void)logout
 {
 	[serviceApplication plugInDidLogOutWithError:nil reconnect:NO];
+	_me = nil;
 }
 
 #pragma mark -
@@ -121,7 +127,6 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		if ([_activeRooms objectForKey:roomId] == nil) {
 			MKNetworkOperation *joinRoomOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/join.json", roomId] params:[NSMutableDictionary dictionaryWithObject:@"" forKey:@""] httpMethod:@"POST" ssl:_useSSL];
 			[joinRoomOperation setUsername:_me.apiAuthToken	password:@"X" basicAuth:YES];
-			joinRoomOperation.postDataEncoding = MKNKPostDataEncodingTypeJSON;
 			[joinRoomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 				[self didJoinRoom:roomId];
 			} onError:^(NSError *error) {
@@ -138,9 +143,25 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	}
 }
 
-- (oneway void)leaveChatRoom:(NSString *)roomName
+- (oneway void)leaveChatRoom:(NSString *)roomId
 {
-	
+	if (_me && _me.apiAuthToken) { 
+		if ([_activeRooms objectForKey:roomId] != nil) {
+			MKNetworkOperation *leaveRoomOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/leave.json", roomId] params:[NSMutableDictionary dictionaryWithObject:@"" forKey:@""] httpMethod:@"POST" ssl:_useSSL];
+			[leaveRoomOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
+			[leaveRoomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+				[serviceApplication plugInDidLeaveChatRoom:roomId error:nil];
+				[_activeRooms removeObjectForKey:roomId];
+			} onError:^(NSError *error) {
+				[serviceApplication plugInDidLeaveChatRoom:roomId error:error];
+				[_activeRooms removeObjectForKey:roomId];
+			}];
+			[_networkEngine enqueueOperation:leaveRoomOperation forceReload:YES];
+		} else {
+			[serviceApplication plugInDidLeaveChatRoom:roomId error:nil];
+			[_activeRooms removeObjectForKey:roomId];
+		}
+	}
 }
 
 - (oneway void)inviteHandles:(NSArray *)handles toChatRoom:(NSString *)roomName withMessage:(IMServicePlugInMessage *)message
@@ -267,7 +288,33 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	}];
 }
 
-- (void)updateUserRooms
+- (void)getAllRooms
+{
+	if (_me && _me.apiAuthToken) {
+		MKNetworkOperation *roomListOperation = [_networkEngine operationWithPath:@"rooms.json" params:nil httpMethod:@"GET" ssl:_useSSL];
+		[roomListOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
+		[roomListOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+			id json = [completedOperation responseJSON];
+			NSArray *allRooms = [GFJSONObject objectWithDictionary:json];
+			
+			for (GFCampfireRoom *room in allRooms) {
+				GFCampfireRoom *existingRoom = [_rooms objectForKey:room.roomKey];
+				if (existingRoom) {
+					// update existing room
+					[existingRoom updateWithRoom:room];
+				} else {
+					[_rooms setObject:room forKey:room.roomKey];
+				}
+			}
+			[self updateAllRoomsInformation];
+		} onError:^(NSError *error) {
+			NSLog(@"%@", error);
+		}];
+		[_networkEngine enqueueOperation:roomListOperation forceReload:YES];
+	}
+}
+
+- (void)getUserRooms
 {
 	if (_me && _me.apiAuthToken) {
 		MKNetworkOperation *usersRooms = [_networkEngine operationWithPath:@"presence.json" params:nil httpMethod:@"GET" ssl:_useSSL];
