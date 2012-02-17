@@ -169,9 +169,27 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	NSLog(@"%@", handles);
 }
 
-- (oneway void)sendMessage:(IMServicePlugInMessage *)message toChatRoom:(NSString *)roomName
+- (oneway void)sendMessage:(IMServicePlugInMessage *)message toChatRoom:(NSString *)roomId
 {
-	
+	if (_me && _me.apiAuthToken) {
+		NSMutableDictionary *jsonMessage = [NSMutableDictionary dictionary];
+		[jsonMessage setObject:@"TextMessage" forKey:@"type"];
+		NSString *messageBody = [message.content string];
+		[jsonMessage setObject:messageBody forKey:@"body"];
+		MKNetworkOperation *sendMessageOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/speak.json", roomId]
+																			  params:[NSMutableDictionary dictionaryWithObject:jsonMessage forKey:@"message"]
+																		  httpMethod:@"POST"
+																				 ssl:_useSSL];
+		[sendMessageOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
+		[sendMessageOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+			id json = completedOperation.responseJSON;
+			GFCampfireMessage *sentMessage = [GFJSONObject objectWithDictionary:json];
+			[serviceApplication plugInDidSendMessage:message toChatRoom:roomId error:nil];
+		} onError:^(NSError *error) {
+			[serviceApplication plugInDidSendMessage:message toChatRoom:roomId error:error];
+		}];
+		[_networkEngine enqueueOperation:sendMessageOperation forceReload:YES];
+	}
 }
 
 - (oneway void)declineChatRoomInvitation:(NSString *)roomName
@@ -344,7 +362,6 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 			GFCampfireRoom *room = [GFJSONObject objectWithDictionary:json];
 			[self updateInformationForRoom:room];
 		} onError:^(NSError *error) {
-//			[serviceApplication plugInDidUpdateGroupList:nil error:error];
 			NSLog(@"%@", error);
 		}];
 		[_networkEngine enqueueOperation:roomOperation forceReload:YES];
@@ -517,6 +534,38 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		} else {
 			[self updateInformationForUserId:userId];
 		}
+	}
+}
+
+- (void)streamRoom:(NSString *)roomId
+{
+	NSString *streamingPath = [NSString stringWithFormat:@"https://streaming.campfirenow.com/room/%@/live.json", roomId];
+	NSURL *streamingURL = [NSURL URLWithString:streamingPath];
+	
+	CFHTTPMessageRef request = CFHTTPMessageCreateRequest(kCFAllocatorDefault, CFSTR("GET"), (__bridge CFURLRef)streamingURL, kCFHTTPVersion1_1);
+	
+	//kCFHTTPAuthenticationSchemeBasic
+//	CFHTTPMessageAddAuthentication(request, <#CFHTTPMessageRef authenticationFailureResponse#>, (__bridge CFStringRef)_username, (__bridge CFStringRef)_password, kCFHTTPAuthenticationSchemeBasic, false);
+	
+//	CFReadStreamRef readStreamRef = CFReadStreamCreateForStreamedHTTPRequest(kCFAllocatorDefault, request, NULL);
+	CFReadStreamRef readStreamRef = CFReadStreamCreateForHTTPRequest(kCFAllocatorDefault, request);
+	CFReadStreamSetProperty(readStreamRef, kCFStreamPropertyHTTPAttemptPersistentConnection, kCFBooleanTrue);
+	
+	/* SSL support ??
+	 if([[[self class] urlScheme] isEqualToString:@"https"] && _disableSSLCertificates) {
+		 sslSettings = CFDictionaryCreateMutable(kCFAllocatorDefault, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+		 CFDictionarySetValue(sslSettings, kCFStreamSSLValidatesCertificateChain, kCFBooleanFalse);
+		 CFReadStreamSetProperty(readStream, kCFStreamPropertySSLSettings, sslSettings); //kCFStreamSSLCertificates
+		 CFRelease(sslSettings);
+	 }
+	 */
+	
+	NSInputStream *readStream = (__bridge NSInputStream *)readStreamRef;
+	[readStream open];
+	
+	while ([readStream hasBytesAvailable]) {
+		NSError *jsonError = nil;
+		id jsonObj = [NSJSONSerialization JSONObjectWithStream:readStream options:0 error:&jsonError];
 	}
 }
 

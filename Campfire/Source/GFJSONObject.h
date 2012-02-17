@@ -20,4 +20,6 @@
 
 - (void)updateWithObject:(GFJSONObject *)obj;
 
+- (id)JSONRepresentation;
+
 @end

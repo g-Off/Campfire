@@ -31,6 +31,8 @@
 		<string>IMServiceCapabilityGroupListHandlePictureSupport</string>
 		<string>IMServiceCapabilityPresenceSupport</string>
 	</array>
+	<key>IMServiceIcon</key>
+	<string>Logo.png</string>
 	<key>IMUsesEnableSSLAccountSetting</key>
 	<true/>
 	<key>IMUsesPasswordAccountSetting</key>

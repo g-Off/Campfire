@@ -151,4 +151,9 @@
 	}];
 }
 
+- (id)JSONRepresentation
+{
+	return nil;
+}
+
 @end

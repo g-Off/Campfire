@@ -59,4 +59,10 @@
 	
 }
 
+- (id)JSONRepresentation
+{
+	NSMutableDictionary *JSONRepresentation = [NSMutableDictionary dictionary];
+	return nil;
+}
+
 @end
