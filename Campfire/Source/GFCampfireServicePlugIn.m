@@ -35,6 +35,10 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 - (void)getRecentMessagesForRoom:(NSString *)roomId sinceMessage:(NSString *)messageId;
 
+- (void)getRemoteUserInfo:(NSString *)userId;
+
+- (void)processMessages:(NSArray *)messages;
+
 @end
 
 @implementation GFCampfireServicePlugIn {
@@ -94,6 +98,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	[loginOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 		id json = [completedOperation responseJSON];
 		_me = [GFJSONObject objectWithDictionary:json];
+		[self updateInformationForUser:_me];
 		[self updateUserRooms];
 		[serviceApplication plugInDidLogIn];
 	} onError:^(NSError *error) {
@@ -114,8 +119,9 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 {
 	if (_me && _me.apiAuthToken) { 
 		if ([_activeRooms objectForKey:roomId] == nil) {
-			MKNetworkOperation *joinRoomOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/join.json", roomId] params:nil httpMethod:@"POST" ssl:_useSSL];
+			MKNetworkOperation *joinRoomOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/join.json", roomId] params:[NSMutableDictionary dictionaryWithObject:@"" forKey:@""] httpMethod:@"POST" ssl:_useSSL];
 			[joinRoomOperation setUsername:_me.apiAuthToken	password:@"X" basicAuth:YES];
+			joinRoomOperation.postDataEncoding = MKNKPostDataEncodingTypeJSON;
 			[joinRoomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 				[self didJoinRoom:roomId];
 			} onError:^(NSError *error) {
@@ -275,6 +281,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 				[self updateInformationForRoom:room];
 			}
 		} onError:^(NSError *error) {
+			NSLog(@"%@", error);
 		}];
 		[_networkEngine enqueueOperation:usersRooms forceReload:YES];
 	}
@@ -291,6 +298,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 			[self updateInformationForRoom:room];
 		} onError:^(NSError *error) {
 //			[serviceApplication plugInDidUpdateGroupList:nil error:error];
+			NSLog(@"%@", error);
 		}];
 		[_networkEngine enqueueOperation:roomOperation forceReload:YES];
 	}
@@ -321,19 +329,29 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		[recentMessagesOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 			id json = [completedOperation responseJSON];
 			NSArray *messages = [GFJSONObject objectWithDictionary:json];
-			
-			for (GFCampfireMessage *message in messages) {
-				if (message.body && message.userId != NSNotFound) {
-					NSMutableAttributedString *messageString = [[NSMutableAttributedString alloc] initWithString:message.body];
-					IMServicePlugInMessage *pluginMessage = [IMServicePlugInMessage servicePlugInMessageWithContent:messageString];
-					NSString *handle = [[NSNumber numberWithInteger:message.userId] stringValue];
-					[serviceApplication plugInDidReceiveMessage:pluginMessage forChatRoom:roomId fromHandle:handle];
-				}
-			}
+			[self processMessages:messages];
 		} onError:^(NSError *error) {
 			// couldn't fetch recents, do I care?
+			NSLog(@"%@", error);
 		}];
 		[_networkEngine enqueueOperation:recentMessagesOperation forceReload:YES];
+	}
+}
+
+- (void)processMessages:(NSArray *)messages
+{
+	for (GFCampfireMessage *message in messages) {
+		if (message.body && message.userId != NSNotFound) {
+			// TODO: adjust things based on message types
+			NSMutableAttributedString *messageString = [[NSMutableAttributedString alloc] initWithString:message.body];
+			IMServicePlugInMessage *pluginMessage = [IMServicePlugInMessage servicePlugInMessageWithContent:messageString];
+			NSString *userId = [[NSNumber numberWithInteger:message.userId] stringValue];
+			NSString *roomId = [[NSNumber numberWithInteger:message.roomId] stringValue];
+			
+			// TODO: do a join based on userId, then when we see a LeaveMessage (maybe KickMessage) depart room, and rejoin for EnterMessage
+			[self getRemoteUserInfo:userId];
+			[serviceApplication plugInDidReceiveMessage:pluginMessage forChatRoom:roomId fromHandle:userId];
+		}
 	}
 }
 
@@ -365,8 +383,20 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	}
 	
 	if (triggersUpdate) {
-		[serviceApplication handles:[joinedUsers allObjects] didJoinChatRoom:room.roomKey];
-		[serviceApplication handles:[departedUsers allObjects] didLeaveChatRoom:room.roomKey];
+		NSArray *joinedHandles = [[joinedUsers valueForKey:@"userKey"] allObjects];
+		NSArray *departedHandles = [[departedUsers valueForKey:@"userKey"] allObjects];
+		
+		if ([joinedHandles count] > 0) {
+			[serviceApplication handles:joinedHandles didJoinChatRoom:room.roomKey];
+		}
+		
+		if ([departedHandles count] > 0) {
+			[serviceApplication handles:departedHandles didLeaveChatRoom:room.roomKey];
+		}
+		
+		for (GFCampfireUser *user in [joinedUsers setByAddingObjectsFromSet:departedUsers]) {
+			[self updateInformationForUser:user];
+		}
 		
 		[self updateAllUsersInformation];
 	}
@@ -419,6 +449,27 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	GFCampfireUser *user = [_users objectForKey:userKey];
 	if (user) {
 		[self updateInformationForUser:user];
+	}
+}
+
+- (void)getRemoteUserInfo:(NSString *)userId
+{
+	if (_me && _me.apiAuthToken) {
+		if ([_users objectForKey:userId] == nil) {
+			MKNetworkOperation *getUserOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"users/%@.json", userId] params:nil httpMethod:@"GET" ssl:_useSSL];
+			[getUserOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
+			[getUserOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+				id json = [completedOperation responseJSON];
+				GFCampfireUser *user = [GFJSONObject objectWithDictionary:json];
+				[self updateInformationForUser:user];
+			} onError:^(NSError *error) {
+				// couldn't fetch user, do I care?
+				NSLog(@"%@", error);
+			}];
+			[_networkEngine enqueueOperation:getUserOperation forceReload:YES];
+		} else {
+			[self updateInformationForUserId:userId];
+		}
 	}
 }
 
