@@ -20,6 +20,7 @@ typedef enum {
 	GFCampfireMessageTypeIdle,
 	GFCampfireMessageTypeKick,
 	GFCampfireMessageTypeLeave,
+	GFCampfireMessageTypeEnter,
 	GFCampfireMessageTypeSystem,
 	GFCampfireMessageTypeTimestamp,
 	GFCampfireMessageTypeTopicChange,
@@ -27,21 +28,6 @@ typedef enum {
 	GFCampfireMessageTypeUnlock,
 	GFCampfireMessageTypeUpload,
 } GFCampfireMessageType;
-
-/*
-<message>
-	<id type="integer">1</id>
-	<room-id type="integer">1</room-id>
-	<user-id type="integer">2</user-id>
-	<body>Hello Room</body>
-	<created-at type="datetime">2009-11-22T23:46:58Z</created-at>
-	<type>#{TextMessage || PasteMessage || SoundMessage || AdvertisementMessage ||
-		AllowGuestsMessage || DisallowGuestsMessage || IdleMessage || KickMessage ||
-		LeaveMessage || SystemMessage || TimestampMessage || TopicChangeMessage ||
-		UnidleMessage || UnlockMessage || UploadMessage}</type>
-	<starred>true</starred>
-</message>
-*/
 
 @interface GFCampfireMessage : GFJSONObject
 
@@ -54,5 +40,7 @@ typedef enum {
 @property (assign, getter = isStarred) BOOL starred;
 
 - (void)updateWithMessage:(GFCampfireMessage *)message;
+
+- (NSString *)messageKey;
 
 @end
