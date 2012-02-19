@@ -233,11 +233,20 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 - (oneway void)requestPictureForHandle:(NSString *)handle withIdentifier:(NSString *)identifier
 {
-	[_avatars objectForKey:identifier];
-	
-	GFCampfireUser *user = [_users objectForKey:identifier];
+	GFCampfireUser *user = [_users objectForKey:handle];
 	if (user) {
-		
+		NSString *avatarKey = [NSString stringWithFormat:@"%@%@", handle, identifier];
+		NSData *avatarData = [_avatars objectForKey:avatarKey];
+		if (avatarData == nil) {
+			NSURLRequest *request = [NSURLRequest requestWithURL:user.avatar];
+			[NSURLConnection sendAsynchronousRequest:request
+											   queue:[NSOperationQueue mainQueue]
+								   completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
+									   [_avatars setObject:data forKey:avatarKey];
+									   NSDictionary *userProperties = [NSDictionary dictionaryWithObject:data forKey:IMHandlePropertyPictureData];
+									   [serviceApplication plugInDidUpdateProperties:userProperties ofHandle:handle];
+								   }];
+		}
 	} else {
 //		[serviceApplication plugInDidUpdateProperties:<#(NSDictionary *)#> ofHandle:<#(NSString *)#>];
 	}
@@ -571,7 +580,8 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		[userInfo setObject:user.emailAddress forKey:IMHandlePropertyEmailAddress];
 		[userInfo setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, nil] forKey:IMHandlePropertyCapabilities];
 		if (user.avatar) {
-			[userInfo setObject:[user.avatar absoluteString] forKey:IMHandlePropertyPictureIdentifier];
+			NSString *avatarKey = [NSString stringWithFormat:@"%@%@", user.userKey, [user.avatar absoluteString]];
+			[userInfo setObject:avatarKey forKey:IMHandlePropertyPictureIdentifier];
 		}
 		
 		NSInteger userStatus = IMHandleAvailabilityUnknown;
