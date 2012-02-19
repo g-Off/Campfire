@@ -26,12 +26,12 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 @interface GFCampfireServicePlugIn () <GCDAsyncSocketDelegate>
 
-- (void)updateInformationForRoom:(GFCampfireRoom *)room;
+- (void)updateInformationForRoom:(GFCampfireRoom *)room didJoin:(BOOL)didJoin;
 - (void)updateAllRoomsInformation;
 - (void)getUserRooms;
 - (void)getAllRooms;
 
-- (void)getRoom:(NSString *)roomId;
+- (void)getRoom:(NSString *)roomId didJoin:(BOOL)didJoin;
 
 - (void)updateAllUsersInformation;
 - (void)updateInformationForUserId:(NSString *)userKey;
@@ -71,6 +71,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	NSMutableDictionary *_users;
 	
 	NSMutableDictionary *_chats;
+	NSMutableDictionary *_avatars;
 }
 
 + (void)initialize
@@ -94,6 +95,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		_activeRooms = [[NSMutableDictionary alloc] init];
 		_users = [[NSMutableDictionary alloc] init];
 		_chats = [[NSMutableDictionary alloc] init];
+		_avatars = [[NSMutableDictionary alloc] init];
 	}
 	
 	return self;
@@ -116,13 +118,23 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	[loginOperation setUsername:_username password:_password basicAuth:YES];
 	[loginOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 		id json = [completedOperation responseJSON];
-		_me = [GFJSONObject objectWithDictionary:json];
+		GFCampfireUser *newMe = [GFJSONObject objectWithDictionary:json];
+		if (_me && [_me isEqual:newMe]) {
+			[_me updateWithUser:newMe];
+		} else {
+			_me = newMe;
+		}
+		
 		[self updateInformationForUser:_me];
 		[self getAllRooms];
 		[self getUserRooms];
 		[serviceApplication plugInDidLogIn];
 	} onError:^(NSError *error) {
-		[serviceApplication plugInDidFailToAuthenticate];
+		if ([error.domain isEqualToString:NSURLErrorDomain] && error.code == 401) {
+			[serviceApplication plugInDidFailToAuthenticate];
+		} else {
+			[serviceApplication plugInDidLogOutWithError:error reconnect:YES];
+		}
 	}];
 	[_networkEngine enqueueOperation:loginOperation forceReload:YES];
 }
@@ -221,6 +233,8 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 - (oneway void)requestPictureForHandle:(NSString *)handle withIdentifier:(NSString *)identifier
 {
+	[_avatars objectForKey:identifier];
+	
 	GFCampfireUser *user = [_users objectForKey:identifier];
 	if (user) {
 		
@@ -362,7 +376,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 			
 			for (GFCampfireRoom *room in usersRooms) {
 				[_activeRooms setObject:room forKey:room.roomKey];
-				[self updateInformationForRoom:room];
+				[self updateInformationForRoom:room didJoin:YES];
 			}
 		} onError:^(NSError *error) {
 			NSLog(@"%@", error);
@@ -371,7 +385,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	}
 }
 
-- (void)getRoom:(NSString *)roomId
+- (void)getRoom:(NSString *)roomId didJoin:(BOOL)didJoin
 {
 	if (_me && _me.apiAuthToken) {
 		MKNetworkOperation *roomOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@.json", roomId] params:nil httpMethod:@"GET" ssl:_useSSL];
@@ -379,7 +393,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		[roomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 			id json = [completedOperation responseJSON];
 			GFCampfireRoom *room = [GFJSONObject objectWithDictionary:json];
-			[self updateInformationForRoom:room];
+			[self updateInformationForRoom:room didJoin:didJoin];
 		} onError:^(NSError *error) {
 			NSLog(@"%@", error);
 		}];
@@ -394,7 +408,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		
 		[self startStreamingRoom:roomId];
 		
-		[self getRoom:roomId];
+		[self getRoom:roomId didJoin:YES];
 		NSString *lastMessageKey = [[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"Campfire-%@", roomId]];
 		[self getRecentMessagesForRoom:roomId sinceMessage:lastMessageKey];
 		
@@ -450,7 +464,6 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 			userId = [[NSNumber numberWithInteger:message.userId] stringValue];
 		}
 		
-		// TODO: adjust things based on message types
 		if (message.type == GFCampfireMessageTypeText || message.type == GFCampfireMessageTypePaste) {
 			NSMutableAttributedString *messageString = [[NSMutableAttributedString alloc] initWithString:message.body];
 			if (message.type == GFCampfireMessageTypePaste) {
@@ -480,7 +493,7 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	}
 }
 
-- (void)updateInformationForRoom:(GFCampfireRoom *)room
+- (void)updateInformationForRoom:(GFCampfireRoom *)room didJoin:(BOOL)didJoin
 {
 	BOOL triggersUpdate = NO;
 	
@@ -496,7 +509,6 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 				
 				departedUsers = [NSMutableSet setWithArray:existingRoom.users];
 				[departedUsers minusSet:[NSSet setWithArray:room.users]];
-				
 			}
 			
 			[existingRoom updateWithRoom:room];
@@ -508,15 +520,20 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 	}
 	
 	if (triggersUpdate) {
-		NSArray *joinedHandles = [[joinedUsers valueForKey:@"userKey"] allObjects];
-		NSArray *departedHandles = [[departedUsers valueForKey:@"userKey"] allObjects];
-		
-		if ([joinedHandles count] > 0) {
-			[serviceApplication handles:joinedHandles didJoinChatRoom:room.roomKey];
-		}
-		
-		if ([departedHandles count] > 0) {
-			[serviceApplication handles:departedHandles didLeaveChatRoom:room.roomKey];
+		if (didJoin) {
+			// on joining we will announce all users
+			[serviceApplication handles:[room.users valueForKey:@"userKey"] didJoinChatRoom:room.roomKey];
+		} else {
+			NSArray *joinedHandles = [[joinedUsers valueForKey:@"userKey"] allObjects];
+			NSArray *departedHandles = [[departedUsers valueForKey:@"userKey"] allObjects];
+			
+			if ([joinedHandles count] > 0) {
+				[serviceApplication handles:joinedHandles didJoinChatRoom:room.roomKey];
+			}
+			
+			if ([departedHandles count] > 0) {
+				[serviceApplication handles:departedHandles didLeaveChatRoom:room.roomKey];
+			}
 		}
 		
 		for (GFCampfireUser *user in [joinedUsers setByAddingObjectsFromSet:departedUsers]) {
@@ -553,8 +570,9 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 		[userInfo setObject:user.name forKey:IMHandlePropertyAlias];
 		[userInfo setObject:user.emailAddress forKey:IMHandlePropertyEmailAddress];
 		[userInfo setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, nil] forKey:IMHandlePropertyCapabilities];
-		
-		// TODO: IMHandlePropertyPictureIdentifier
+		if (user.avatar) {
+			[userInfo setObject:[user.avatar absoluteString] forKey:IMHandlePropertyPictureIdentifier];
+		}
 		
 		NSInteger userStatus = IMHandleAvailabilityUnknown;
 		for (GFCampfireRoom *room in _rooms.objectEnumerator) {
@@ -673,24 +691,63 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 
 - (void)socket:(__unsafe_unretained GCDAsyncSocket *)sock didReadData:(__unsafe_unretained NSData *)data withTag:(long)tag
 {
-	NSString *stringData = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-	if (tag == 0 || [stringData isEqualToString:@"1\r\n"] || [data isEqual:[GCDAsyncSocket CRLFData]]) {
-		// don't care, move on
-	} else {
-		NSError *error = nil;
-		id jsonObj = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
-		if (error == nil && jsonObj != nil) {
-			NSLog(@"Received Message: %@", stringData);
-			if ([jsonObj isKindOfClass:[NSDictionary class]]) {
-				GFCampfireMessage *campfireObj = [[GFCampfireMessage alloc] initWithDictionary:jsonObj];
-				[self processStreamMessage:(GFCampfireMessage *)campfireObj];
+	NSString *stringDataWithCRLF = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+	if (tag == 0) {
+		NSLog(@"%@", stringDataWithCRLF);
+		if ([stringDataWithCRLF hasSuffix:@"\r\n\r\n"]) {
+			NSString *httpHeader = [stringDataWithCRLF substringToIndex:([stringDataWithCRLF length] - 4)];
+			NSArray *httpHeaderParts = [httpHeader componentsSeparatedByString:@"\r\n"];
+			__block CFHTTPMessageRef response = NULL;
+			[httpHeaderParts enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+				NSString *headerPart = obj;
+				if (idx == 0) {
+					NSScanner *scanner = [NSScanner scannerWithString:headerPart];
+					[scanner scanString:@"HTTP/" intoString:nil];
+					NSString *httpVersionString = nil;
+					[scanner scanUpToString:@" " intoString:&httpVersionString];
+					NSInteger httpCode = 0;
+					[scanner scanInteger:&httpCode];
+					
+					CFStringRef httpVersion = [httpVersionString isEqualToString:@"1.1"] ? kCFHTTPVersion1_1 : kCFHTTPVersion1_0;
+					response = CFHTTPMessageCreateResponse(kCFAllocatorDefault, httpCode, NULL, httpVersion);
+				} else {
+					NSArray *headerFieldValue = [headerPart componentsSeparatedByString:@": "];
+					if ([headerFieldValue count] == 2) {
+						CFHTTPMessageSetHeaderFieldValue(response, (__bridge CFStringRef)[headerFieldValue objectAtIndex:0], (__bridge CFStringRef)[headerFieldValue objectAtIndex:1]);
+					}
+				}
+			}];
+		}
+	} else if (tag == 1) {
+		NSString *stringData = [stringDataWithCRLF substringWithRange:NSMakeRange(0, [stringDataWithCRLF length] - 2)];
+		if ([stringData hasPrefix:@"{"]) {
+			// probably JSON data
+			NSError *error = nil;
+			id jsonObj = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
+			if (error == nil && jsonObj != nil) {
+				NSLog(@"Received Message: %@", stringData);
+				if ([jsonObj isKindOfClass:[NSDictionary class]]) {
+					GFCampfireMessage *campfireObj = [[GFCampfireMessage alloc] initWithDictionary:jsonObj];
+					[self processStreamMessage:(GFCampfireMessage *)campfireObj];
+				}
+			} else if (error) {
+				NSLog(@"Error parsing JSON stream: %@, data=%@", error, stringData);
 			}
-		} else if (error) {
-			NSLog(@"Error parsing JSON stream: %@", error);
+		} else if ([stringData isEqualToString:@" "] || [stringData length] == 0) {
+			// nothing of value
+		} else {
+			__unused NSInteger pingNumber = [stringData integerValue];
+			// wtf does the campfire api expect us to do with this number?
 		}
 	}
 	
-	[sock readDataToData:[GCDAsyncSocket CRLFData] withTimeout:-1.0 tag:1];
+	[sock readDataToData:[GCDAsyncSocket CRLFData] withTimeout:5.0 tag:1];
+}
+
+- (NSTimeInterval)socket:(GCDAsyncSocket *)sock shouldTimeoutReadWithTag:(long)tag elapsed:(NSTimeInterval)elapsed bytesDone:(NSUInteger)length
+{
+	// need to attempt to re-establish connection
+	return 0.0;
 }
 
 - (void)socketDidDisconnect:(__unsafe_unretained GCDAsyncSocket *)sock withError:(__unsafe_unretained NSError *)err
