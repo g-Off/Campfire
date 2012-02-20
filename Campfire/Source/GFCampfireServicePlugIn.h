@@ -13,6 +13,7 @@
 IMServicePlugInGroupListSupport,
 IMServicePlugInGroupListHandlePictureSupport,
 IMServicePlugInChatRoomSupport,
-IMServicePlugInPresenceSupport>
+IMServicePlugInPresenceSupport,
+IMServicePlugInInstantMessagingSupport>
 
 @end

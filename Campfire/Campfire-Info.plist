@@ -30,6 +30,7 @@
 		<string>IMServiceCapabilityGroupListSupport</string>
 		<string>IMServiceCapabilityGroupListHandlePictureSupport</string>
 		<string>IMServiceCapabilityPresenceSupport</string>
+		<string>IMServiceCapabilityInstantMessagingSupport</string>
 	</array>
 	<key>IMServiceIcon</key>
 	<string>Logo.png</string>
