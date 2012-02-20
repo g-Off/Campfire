@@ -178,6 +178,22 @@ enum {
 	}
 }
 
+- (void)listRooms:(NSString *)args
+{
+	NSMutableArray *roomDescriptions = [NSMutableArray arrayWithCapacity:[_rooms count]];
+	for (GFCampfireRoom *room in _rooms.objectEnumerator) {
+		// TODO: format this better (using html?)
+		NSString *roomDescription = [NSString stringWithFormat:@"%@\t| %@\n\t\t%@", room.roomKey, room.name, room.topic];
+		[roomDescriptions addObject:roomDescription];
+	}
+	NSString *roomDescriptionString = [roomDescriptions componentsJoinedByString:@"\n"];
+	NSAttributedString *attributedString = [[NSAttributedString alloc] initWithString:roomDescriptionString
+																		   attributes:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES]
+																												  forKey:IMAttributeItalic]];
+	IMServicePlugInMessage *message = [IMServicePlugInMessage servicePlugInMessageWithContent:attributedString];
+	[serviceApplication plugInDidReceiveMessage:message fromHandle:@"console"];	
+}
+
 #pragma mark -
 #pragma mark IMServicePlugIn
 
@@ -197,6 +213,7 @@ enum {
 		
 //		GFCampfireAddCommand(_commands, @"topic", @"Sets the topic of the specified room", @selector(setRoomTopic:));
 		GFCampfireAddCommand(_commands, @"ping", @"Pings the console", @selector(ping:));
+		GFCampfireAddCommand(_commands, @"list", @"List the available rooms", @selector(listRooms:));
 		
 		GFCampfireAddCommand(_roomCommands, @"ping", @"Pings the room", @selector(ping:));
 	}
