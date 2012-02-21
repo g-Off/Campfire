@@ -121,15 +121,6 @@ enum {
 	}];
 }
 
-- (void)setRoom:(NSString *)roomId locked:(BOOL)locked
-{
-	if (locked) {
-		[self lockRoom:roomId];
-	} else {
-		[self unlockRoom:roomId];
-	}
-}
-
 - (void)lockRoom:(NSString *)roomId
 {
 	GFCampfireRoom *room = [_rooms objectForKey:roomId];
@@ -140,7 +131,7 @@ enum {
 																		  ssl:YES];
 		[lockOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
 		[lockOperation onCompletion:^(MKNetworkOperation *completedOperation) {
-			
+			room.locked = YES;
 		} onError:^(NSError *error) {
 			
 		}];
@@ -157,7 +148,7 @@ enum {
 																			ssl:YES];
 		[unlockOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
 		[unlockOperation onCompletion:^(MKNetworkOperation *completedOperation) {
-			
+			room.locked = NO;
 		} onError:^(NSError *error) {
 			
 		}];
@@ -171,7 +162,7 @@ enum {
 																		   attributes:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES]
 																												  forKey:IMAttributeItalic]];
 	IMServicePlugInMessage *message = [IMServicePlugInMessage servicePlugInMessageWithContent:attributedString];
-	if ([_chats objectForKey:args]) {
+	if ([_activeRooms objectForKey:args]) {
 		[serviceApplication plugInDidReceiveMessage:message forChatRoom:args fromHandle:@"console"];
 	} else {
 		[serviceApplication plugInDidReceiveMessage:message fromHandle:@"console"];	
@@ -261,6 +252,10 @@ enum {
 
 - (oneway void)logout
 {
+	for (GCDAsyncSocket *socket in _chats.objectEnumerator) {
+		[socket disconnect];
+	}
+	[_chats removeAllObjects];
 	[serviceApplication plugInDidLogOutWithError:nil reconnect:NO];
 	_me = nil;
 }
@@ -351,8 +346,6 @@ enum {
 - (oneway void)sendMessage:(IMServicePlugInMessage *)message toChatRoom:(NSString *)roomId
 {
 	if (_me && _me.apiAuthToken) {
-		NSMutableDictionary *jsonMessage = [NSMutableDictionary dictionary];
-		[jsonMessage setObject:@"TextMessage" forKey:@"type"];
 		NSString *messageBody = [message.content string];
 		
 		GFCampfireCommand *command = [self commandForMessage:messageBody commands:_roomCommands];
@@ -360,6 +353,8 @@ enum {
 			NSString *args = [self argumentsForCommand:command inMessage:messageBody];
 			[command performActionWithObject:self args:[NSString stringWithFormat:@"%@ %@", roomId, args]];
 		} else {
+			NSMutableDictionary *jsonMessage = [NSMutableDictionary dictionary];
+			[jsonMessage setObject:@"TextMessage" forKey:@"type"];
 			[jsonMessage setObject:messageBody forKey:@"body"];
 			MKNetworkOperation *sendMessageOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/speak.json", roomId]
 																				  params:[NSMutableDictionary dictionaryWithObject:jsonMessage forKey:@"message"]
@@ -489,40 +484,43 @@ enum {
 #pragma mark -
 #pragma mark Helper Methods
 
+- (void)updateRoomInformation:(GFCampfireRoom *)room
+{
+	NSMutableDictionary *properties = [NSMutableDictionary dictionary];
+	NSNumber *roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityAvailable];
+	if (room.locked) {
+		roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityOffline];
+	} else if (room.full) {
+		roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityAway];
+	}
+	
+	[properties setObject:roomStatus forKey:IMHandlePropertyAvailability];
+	[properties setObject:room.topic forKey:IMHandlePropertyStatusMessage];
+	[properties setObject:room.name forKey:IMHandlePropertyAlias];
+	if (room.full == NO && room.locked == NO) {
+		[properties setObject:IMHandleCapabilityChatRoom forKey:IMHandlePropertyCapabilities];
+	}
+	
+	/*
+	 IMHandlePropertyAvailability      - The IMHandleAvailability of the handle
+	 IMHandlePropertyStatusMessage     - Current status message as plaintext NSString
+	 IMHandlePropertyIdleDate          - The time of the last user activity
+	 IMHandlePropertyAlias             - A "prettier" version of the handle, if available
+	 IMHandlePropertyFirstName         - The first name (given name) of a handle
+	 IMHandlePropertyLastName          - The last name (family name) of a handle
+	 IMHandlePropertyEmailAddress      - The e-mail address for a handle
+	 IMHandlePropertyPictureIdentifier - A unique identifier for the handle's picture
+	 IMHandlePropertyCapabilities      - The capabilities of the handle
+	 */
+	
+	[serviceApplication plugInDidUpdateProperties:properties ofHandle:room.roomKey];
+}
+
 - (void)updateAllRoomsInformation
 {
-	[_rooms enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
-		NSString *handle = key;
-		GFCampfireRoom *room = obj;
-		NSMutableDictionary *properties = [NSMutableDictionary dictionary];
-		NSNumber *roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityAvailable];
-		if (room.locked) {
-			roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityOffline];
-		} else if (room.full) {
-			roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityAway];
-		}
-		
-		[properties setObject:roomStatus forKey:IMHandlePropertyAvailability];
-		[properties setObject:room.topic forKey:IMHandlePropertyStatusMessage];
-		[properties setObject:room.name forKey:IMHandlePropertyAlias];
-		if (room.full == NO && room.locked == NO) {
-			[properties setObject:IMHandleCapabilityChatRoom forKey:IMHandlePropertyCapabilities];
-		}
-		
-		/*
-		 IMHandlePropertyAvailability      - The IMHandleAvailability of the handle
-		 IMHandlePropertyStatusMessage     - Current status message as plaintext NSString
-		 IMHandlePropertyIdleDate          - The time of the last user activity
-		 IMHandlePropertyAlias             - A "prettier" version of the handle, if available
-		 IMHandlePropertyFirstName         - The first name (given name) of a handle
-		 IMHandlePropertyLastName          - The last name (family name) of a handle
-		 IMHandlePropertyEmailAddress      - The e-mail address for a handle
-		 IMHandlePropertyPictureIdentifier - A unique identifier for the handle's picture
-		 IMHandlePropertyCapabilities      - The capabilities of the handle
-		 */
-		
-		[serviceApplication plugInDidUpdateProperties:properties ofHandle:handle];
-	}];
+	for (GFCampfireRoom *room in _rooms.objectEnumerator) {
+		[self updateRoomInformation:room];
+	}
 }
 
 - (void)getAllRooms
