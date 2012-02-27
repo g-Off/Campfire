@@ -12,9 +12,7 @@
 
 #import "GFCampfireUser.h"
 
-@implementation GFCampfireService {
-	MKNetworkEngine *_networkEngine;
-}
+@implementation GFCampfireService
 
 @synthesize rooms=_rooms;
 @synthesize activeRooms=_activeRooms;
@@ -32,6 +30,8 @@
 @synthesize me=_me;
 
 @synthesize delegate=_delegate;
+
+@synthesize networkEngine=_networkEngine;
 
 - (id)init
 {

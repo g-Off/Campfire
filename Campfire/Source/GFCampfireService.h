@@ -9,6 +9,7 @@
 #import <Foundation/Foundation.h>
 
 @class GFCampfireRoom, GFCampfireUser;
+@class MKNetworkEngine;
 
 @protocol GFCampfireServiceDelegate;
 
@@ -21,6 +22,8 @@
 @property (readonly) NSMutableDictionary *chats;
 @property (readonly) NSMutableDictionary *commands;
 @property (readonly) NSMutableDictionary *roomCommands;
+
+@property (readonly) MKNetworkEngine *networkEngine;
 
 @property (copy) NSString *username;
 @property (copy) NSString *password;
