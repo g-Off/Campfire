@@ -22,6 +22,7 @@
 
 #import "GCDAsyncSocket.h"
 #import "GFCampfireCommand.h"
+#import "NSString+GFJSONObject.h"
 
 static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 static NSString *kGFCampfireErrorDomain = @"GFCampfireErrorDomain";
@@ -923,15 +924,16 @@ enum {
 		if ([stringData hasPrefix:@"{"]) {
 			// probably JSON data
 			NSError *error = nil;
-			id jsonObj = [NSJSONSerialization JSONObjectWithData:data options:0 error:&error];
-			if (error == nil && jsonObj != nil) {
-				NSLog(@"Received Message: %@", stringData);
+			
+			id jsonObj = [stringData jsonObject:&error];
+			if (jsonObj != nil) {
+				DDLogInfo(@"Received Message: %@", stringData);
 				if ([jsonObj isKindOfClass:[NSDictionary class]]) {
 					GFCampfireMessage *campfireObj = [[GFCampfireMessage alloc] initWithDictionary:jsonObj];
 					[self processStreamMessage:(GFCampfireMessage *)campfireObj];
 				}
 			} else if (error) {
-				NSLog(@"Error parsing JSON stream: %@, data=%@", error, stringData);
+				DDLogWarn(@"Error parsing JSON stream: %@, data=%@", error, stringData);
 			}
 		} else if ([stringData isEqualToString:@" "] || [stringData length] == 0) {
 			// nothing of value

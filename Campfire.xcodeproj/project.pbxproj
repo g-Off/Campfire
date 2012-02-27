@@ -32,6 +32,7 @@
 		6C47C1AA14DE04DC00AF16FA /* GFCampfireService.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C47C1A914DE04DC00AF16FA /* GFCampfireService.m */; };
 		6C58328714F1E47F0095AEB3 /* GFCampfireCommand.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C58328614F1E47F0095AEB3 /* GFCampfireCommand.m */; };
 		6C5A883F14EDEA250058592F /* GFCampfireOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C5A883E14EDEA250058592F /* GFCampfireOperation.m */; };
+		6C796B9714FAE97000F35AD5 /* NSString+GFJSONObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C796B9614FAE97000F35AD5 /* NSString+GFJSONObject.m */; };
 		6C796BA014FB2B1F00F35AD5 /* GFJSONURLValueTransformer.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C796B9F14FB2B1E00F35AD5 /* GFJSONURLValueTransformer.m */; };
 		6C7F494C14E4D8C900B49AE4 /* DDAbstractDatabaseLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C7F493D14E4D8C900B49AE4 /* DDAbstractDatabaseLogger.m */; };
 		6C7F494D14E4D8C900B49AE4 /* DDASLLogger.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C7F493F14E4D8C900B49AE4 /* DDASLLogger.m */; };
@@ -86,6 +87,8 @@
 		6C58328614F1E47F0095AEB3 /* GFCampfireCommand.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireCommand.m; sourceTree = "<group>"; };
 		6C5A883D14EDEA250058592F /* GFCampfireOperation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFCampfireOperation.h; sourceTree = "<group>"; };
 		6C5A883E14EDEA250058592F /* GFCampfireOperation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireOperation.m; sourceTree = "<group>"; };
+		6C796B9514FAE97000F35AD5 /* NSString+GFJSONObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+GFJSONObject.h"; sourceTree = "<group>"; };
+		6C796B9614FAE97000F35AD5 /* NSString+GFJSONObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+GFJSONObject.m"; sourceTree = "<group>"; };
 		6C796B9E14FB2B1E00F35AD5 /* GFJSONURLValueTransformer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFJSONURLValueTransformer.h; sourceTree = "<group>"; };
 		6C796B9F14FB2B1E00F35AD5 /* GFJSONURLValueTransformer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFJSONURLValueTransformer.m; sourceTree = "<group>"; };
 		6C7F493C14E4D8C900B49AE4 /* DDAbstractDatabaseLogger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DDAbstractDatabaseLogger.h; sourceTree = "<group>"; };
@@ -248,6 +251,8 @@
 				6C5A883E14EDEA250058592F /* GFCampfireOperation.m */,
 				6C58328514F1E47F0095AEB3 /* GFCampfireCommand.h */,
 				6C58328614F1E47F0095AEB3 /* GFCampfireCommand.m */,
+				6C796B9514FAE97000F35AD5 /* NSString+GFJSONObject.h */,
+				6C796B9614FAE97000F35AD5 /* NSString+GFJSONObject.m */,
 				6C796B9E14FB2B1E00F35AD5 /* GFJSONURLValueTransformer.h */,
 				6C796B9F14FB2B1E00F35AD5 /* GFJSONURLValueTransformer.m */,
 			);
@@ -409,6 +414,7 @@
 				6C5A883F14EDEA250058592F /* GFCampfireOperation.m in Sources */,
 				6C9C717314EEB5700046AB0E /* GCDAsyncSocket.m in Sources */,
 				6C58328714F1E47F0095AEB3 /* GFCampfireCommand.m in Sources */,
+				6C796B9714FAE97000F35AD5 /* NSString+GFJSONObject.m in Sources */,
 				6C796BA014FB2B1F00F35AD5 /* GFJSONURLValueTransformer.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
