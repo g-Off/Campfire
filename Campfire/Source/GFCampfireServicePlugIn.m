@@ -677,7 +677,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 			}
 			[self updateAllRoomsInformation];
 		} onError:^(NSError *error) {
-			DDLogError(@"%@", error);
+			DDLogError(@"Error fetching rooms, %@", error);
 		}];
 		[_networkEngine enqueueOperation:roomListOperation forceReload:YES];
 	}
@@ -700,7 +700,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 				[serviceApplication plugInDidReceiveInvitation:message forChatRoom:room.roomKey fromHandle:nil/*@"console"*/];
 			}
 		} onError:^(NSError *error) {
-			DDLogError(@"%@", error);
+			DDLogError(@"Error fetching users active rooms, %@", error);
 		}];
 		[_networkEngine enqueueOperation:usersRooms forceReload:YES];
 	}
@@ -716,7 +716,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 			GFCampfireRoom *room = [GFJSONObject objectWithDictionary:json];
 			[self updateInformationForRoom:room didJoin:didJoin];
 		} onError:^(NSError *error) {
-			DDLogError(@"%@", error);
+			DDLogError(@"Error fetching room %@, %@", roomId, error);
 		}];
 		[_networkEngine enqueueOperation:roomOperation forceReload:YES];
 	}
@@ -753,7 +753,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 			[self processHistoryMessages:messages];
 		} onError:^(NSError *error) {
 			// couldn't fetch recents, do I care?
-			DDLogError(@"%@", error);
+			DDLogError(@"Error fetching recent messages for room %@ starting with message %@, %@", roomId, messageId, error);
 		}];
 		[_networkEngine enqueueOperation:recentMessagesOperation forceReload:YES];
 	}
@@ -937,7 +937,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 				[self updateInformationForUser:user];
 			} onError:^(NSError *error) {
 				// couldn't fetch user, do I care?
-				DDLogError(@"%@", error);
+				DDLogError(@"Error fetching info for user %@, %@", userId, error);
 			}];
 			[_networkEngine enqueueOperation:getUserOperation forceReload:YES];
 		} else {
@@ -963,7 +963,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	
 	NSError *error = nil;
 	if (![asyncSocket connectToHost:host onPort:port error:&error]) {
-		DDLogError(@"Could not connect to %@", host);
+		DDLogError(@"Error establishing stream for room %@. Could not connect to %@, %@", roomId, host, error);
 	} else {
 		DDLogInfo(@"Connecting to %@...", host);
 	}
@@ -1089,8 +1089,8 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 
 - (void)socketDidDisconnect:(__unsafe_unretained GCDAsyncSocket *)sock withError:(__unsafe_unretained NSError *)err
 {
-	DDLogWarn(@"Socket disconnected with error: %@", err);
 	NSString *roomId = [self roomIdForSocket:sock];
+	DDLogWarn(@"Socket for room %@ disconnected with error: %@", roomId, err);
 	if (roomId) {
 		[serviceApplication plugInDidLeaveChatRoom:roomId error:err];
 		
