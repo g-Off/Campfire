@@ -11,5 +11,6 @@
 @interface NSString (GFJSONObject)
 
 - (id)jsonObject:(NSError **)error;
+- (NSArray *)jsonStrings;
 
 @end

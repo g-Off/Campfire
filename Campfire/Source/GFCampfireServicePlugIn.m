@@ -1051,18 +1051,21 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	} else if (tag == 1) {
 		NSString *stringData = [stringDataWithCRLF substringWithRange:NSMakeRange(0, [stringDataWithCRLF length] - 2)];
 		if ([stringData hasPrefix:@"{"]) {
-			// probably JSON data
-			NSError *error = nil;
-			
-			id jsonObj = [stringData jsonObject:&error];
-			if (jsonObj != nil) {
-				DDLogInfo(@"Received Message: %@", stringData);
-				if ([jsonObj isKindOfClass:[NSDictionary class]]) {
-					GFCampfireMessage *campfireObj = [[GFCampfireMessage alloc] initWithDictionary:jsonObj];
-					[self processStreamMessage:(GFCampfireMessage *)campfireObj];
+			// probably JSON data, could be multiple JSON dictionaries
+			NSArray *jsonStrings = [stringData jsonStrings];
+			for (NSString *jsonString in jsonStrings) {
+				NSError *error = nil;
+				
+				id jsonObj = [jsonString jsonObject:&error];
+				if (jsonObj != nil) {
+					DDLogInfo(@"Received Message: %@", jsonString);
+					if ([jsonObj isKindOfClass:[NSDictionary class]]) {
+						GFCampfireMessage *campfireObj = [[GFCampfireMessage alloc] initWithDictionary:jsonObj];
+						[self processStreamMessage:(GFCampfireMessage *)campfireObj];
+					}
+				} else if (error) {
+					DDLogWarn(@"Error parsing JSON stream: %@, data=%@", error, jsonString);
 				}
-			} else if (error) {
-				DDLogWarn(@"Error parsing JSON stream: %@, data=%@", error, stringData);
 			}
 		} else if ([stringData isEqualToString:@" "] || [stringData length] == 0) {
 			// nothing of value
@@ -1072,6 +1075,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 		}
 	}
 	
+	// XXX: CRLF could be problematic if someone sends/pastes a \r\n in the body or whatnot of their message
 	[socket readDataToData:[GCDAsyncSocket CRLFData] withTimeout:5.0 tag:1];
 }
 

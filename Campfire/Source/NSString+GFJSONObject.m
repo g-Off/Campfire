@@ -16,4 +16,28 @@
 	return [NSJSONSerialization JSONObjectWithData:data options:0 error:error];
 }
 
+- (NSArray *)jsonStrings
+{
+	BOOL inRootJSON = NO;
+	NSUInteger braceCount = 0;
+	NSMutableArray *jsonStrings = [NSMutableArray array];
+	for (NSUInteger i = 0; i < [self length]; ++i) {
+		unichar c = [self characterAtIndex:i];
+		if (c == '{') {
+			inRootJSON = YES;
+			++braceCount;
+		} else if (c == '}') {
+			--braceCount;
+		}
+		
+		if (braceCount == 0 && inRootJSON) {
+			inRootJSON = NO;
+			NSString *jsonString = [self substringToIndex:i + 1];
+			[jsonStrings addObject:jsonString];
+		}
+	}
+	
+	return [jsonStrings copy];
+}
+
 @end
