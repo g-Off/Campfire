@@ -10,6 +10,7 @@
 #import "DDLog.h"
 #import "DDASLLogger.h"
 #import "DDTTYLogger.h"
+#import "DDFileLogger.h"
 
 #import <MKNetworkKit/MKNetworkKit.h>
 
@@ -32,7 +33,15 @@ enum {
 	GFCampfireErrorMessagingUsersNotSupported,
 };
 
-#define GFCampfireAddCommand(dict, command, help, sel) [dict setObject:[GFCampfireCommand commandWithName:command helpString:help selector:sel] forKey:command]
+static inline void GFCampfireAddCommand(NSMutableDictionary *dict, NSString *command, NSString *help, SEL sel)
+{
+	[dict setObject:[GFCampfireCommand commandWithName:command helpString:help selector:sel] forKey:command];
+}
+
+static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString *command, NSString *help, void (^block)(NSString *args))
+{
+	[dict setObject:[GFCampfireCommand commandWithName:command helpString:help action:block] forKey:command];
+}
 
 @interface GFCampfireServicePlugIn () <GCDAsyncSocketDelegate>
 
@@ -63,6 +72,8 @@ enum {
 
 - (NSString *)roomIdForSocket:(GCDAsyncSocket *)socket;
 
+@property (assign, getter = isReachable) BOOL reachable;
+
 @end
 
 @implementation GFCampfireServicePlugIn {
@@ -81,17 +92,23 @@ enum {
 	NSMutableDictionary *_users;
 	
 	NSMutableDictionary *_chats;
-	NSMutableDictionary *_avatars;
 	
 	NSMutableDictionary *_commands;
-	NSMutableDictionary *_roomCommands;
 }
+
+@synthesize reachable=_reachable;
 
 + (void)initialize
 {
 	if (self == [GFCampfireServicePlugIn class]) {
-		[DDLog addLogger:[DDASLLogger sharedInstance]];
-		[DDLog addLogger:[DDTTYLogger sharedInstance]];
+//		[DDLog addLogger:[DDASLLogger sharedInstance]];
+//		[DDLog addLogger:[DDTTYLogger sharedInstance]];
+		NSString *appName = [[NSBundle bundleForClass:self] bundleIdentifier];//[[NSProcessInfo processInfo] processName];
+		NSArray *paths = NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES);
+		NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : NSTemporaryDirectory();
+		NSString *logsDirectory = [[basePath stringByAppendingPathComponent:@"Logs"] stringByAppendingPathComponent:appName];
+		DDLogFileManagerDefault *fileManager = [[DDLogFileManagerDefault alloc] initWithLogsDirectory:logsDirectory];
+		[DDLog addLogger:[[DDFileLogger alloc] initWithLogFileManager:fileManager]];
 		[GFJSONObject registerClassPrefix:@"GFCampfire"];
 	}
 }
@@ -99,24 +116,34 @@ enum {
 #pragma mark -
 #pragma mark Command Actions
 
-- (void)setRoomTopic:(NSString *)args
-{
-	NSScanner *scanner = [NSScanner scannerWithString:args];
-	NSString *roomId = nil;
-	NSString *topic = nil;
-	[scanner scanUpToCharactersFromSet:[NSCharacterSet whitespaceCharacterSet] intoString:&roomId];
-	[scanner scanUpToString:@"\0" intoString:&topic];
-	
-	[self setRoom:roomId topic:topic];
-}
-
 - (void)setRoom:(NSString *)roomId topic:(NSString *)topic
 {
-	NSMutableDictionary *params = [NSMutableDictionary dictionary];
+	NSDictionary *params = [NSDictionary dictionaryWithObject:topic forKey:@"topic"];
+	[self updateRoom:roomId attributes:params];
+}
+
+- (void)setRoom:(NSString *)roomId name:(NSString *)name
+{
+	NSDictionary *params = [NSDictionary dictionaryWithObject:name forKey:@"name"];
+	[self updateRoom:roomId attributes:params];
+}
+
+- (void)updateRoom:(NSString *)roomId attributes:(NSDictionary *)attributes
+{
+	NSMutableDictionary *params = [NSMutableDictionary dictionaryWithDictionary:attributes];
 	MKNetworkOperation *changeTopicOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@.json", roomId] params:params httpMethod:@"PUT" ssl:YES];
 	[changeTopicOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
 	[changeTopicOperation onCompletion:^(MKNetworkOperation *completedOperation) {
-		[serviceApplication plugInDidReceiveNotice:topic forChatRoom:roomId];
+		GFCampfireRoom *room = [_rooms objectForKey:roomId];
+		NSString *topic = [params objectForKey:@"topic"];
+		NSString *name = [params objectForKey:@"name"];
+		if (topic) {
+			room.topic = topic;
+			[serviceApplication plugInDidReceiveNotice:topic forChatRoom:roomId];
+		}
+		if (name) {
+			room.name = name;
+		}
 	} onError:^(NSError *error) {
 		
 	}];
@@ -156,38 +183,30 @@ enum {
 	}
 }
 
-- (void)ping:(NSString *)args
-{
-	NSString *pongString = @"pong!";
-	NSAttributedString *attributedString = [[NSAttributedString alloc] initWithString:pongString
-																		   attributes:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES]
-																												  forKey:IMAttributeItalic]];
-	IMServicePlugInMessage *message = [IMServicePlugInMessage servicePlugInMessageWithContent:attributedString];
-	if ([_activeRooms objectForKey:args]) {
-		[serviceApplication plugInDidReceiveMessage:message forChatRoom:args fromHandle:@"console"];
-	} else {
-		[serviceApplication plugInDidReceiveMessage:message fromHandle:@"console"];	
-	}
-}
-
-- (void)listRooms:(NSString *)args
-{
-	NSMutableArray *roomDescriptions = [NSMutableArray arrayWithCapacity:[_rooms count]];
-	for (GFCampfireRoom *room in _rooms.objectEnumerator) {
-		// TODO: format this better (using html?)
-		NSString *roomDescription = [NSString stringWithFormat:@"%@\t| %@\n\t\t%@", room.roomKey, room.name, room.topic];
-		[roomDescriptions addObject:roomDescription];
-	}
-	NSString *roomDescriptionString = [roomDescriptions componentsJoinedByString:@"\n"];
-	NSAttributedString *attributedString = [[NSAttributedString alloc] initWithString:roomDescriptionString
-																		   attributes:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES]
-																												  forKey:IMAttributeItalic]];
-	IMServicePlugInMessage *message = [IMServicePlugInMessage servicePlugInMessageWithContent:attributedString];
-	[serviceApplication plugInDidReceiveMessage:message fromHandle:@"console"];	
-}
-
 #pragma mark -
 #pragma mark IMServicePlugIn
+
+- (IMServicePlugInMessage *)roomList
+{
+	NSMutableAttributedString *roomListString = [[NSMutableAttributedString alloc] init];
+	for (GFCampfireRoom *room in _rooms.objectEnumerator) {
+		NSString *roomString = [NSString stringWithFormat:@"%d | %@\n", room.roomId, room.name];
+		NSAttributedString *attributedRoomString = [[NSAttributedString alloc] initWithString:roomString];
+		[roomListString appendAttributedString:attributedRoomString];
+	}
+	
+	IMServicePlugInMessage *message = [IMServicePlugInMessage servicePlugInMessageWithContent:roomListString];
+	
+	return message;
+}
+
+- (IMServicePlugInMessage *)infoMessage
+{
+	NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+	NSURL *path = [bundle URLForResource:@"PluginInfo" withExtension:@"rtf"];
+	NSAttributedString *info = [[NSAttributedString alloc] initWithURL:path documentAttributes:nil];
+	return [IMServicePlugInMessage servicePlugInMessageWithContent:info];
+}
 
 - (id)initWithServiceApplication:(id <IMServiceApplication, IMServiceApplicationGroupListSupport, IMServiceApplicationChatRoomSupport, IMServiceApplicationInstantMessagingSupport>)aServiceApplication
 {
@@ -198,16 +217,101 @@ enum {
 		_activeRooms = [[NSMutableDictionary alloc] init];
 		_users = [[NSMutableDictionary alloc] init];
 		_chats = [[NSMutableDictionary alloc] init];
-		_avatars = [[NSMutableDictionary alloc] init];
 		
 		_commands = [[NSMutableDictionary alloc] init];
-		_roomCommands = [[NSMutableDictionary alloc] init];
 		
-//		GFCampfireAddCommand(_commands, @"topic", @"Sets the topic of the specified room", @selector(setRoomTopic:));
-		GFCampfireAddCommand(_commands, @"ping", @"Pings the console", @selector(ping:));
-		GFCampfireAddCommand(_commands, @"list", @"List the available rooms", @selector(listRooms:));
+		GFCampfireAddBlockCommand(_commands, @"ping", @"Pings the console", ^(NSString *args) {
+			NSString *pongString = @"pong!";
+			NSAttributedString *attributedString = [[NSAttributedString alloc] initWithString:pongString
+																				   attributes:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES]
+																														  forKey:IMAttributeItalic]];
+			IMServicePlugInMessage *message = [IMServicePlugInMessage servicePlugInMessageWithContent:attributedString];
+			if ([_rooms objectForKey:args]) {
+				[serviceApplication plugInDidReceiveMessage:message forChatRoom:args fromHandle:@"console"];
+			} else {
+				[serviceApplication plugInDidReceiveMessage:message fromHandle:@"console"];	
+			}
+		});
 		
-		GFCampfireAddCommand(_roomCommands, @"ping", @"Pings the room", @selector(ping:));
+		GFCampfireAddBlockCommand(_commands, @"list", @"List the available rooms", ^(NSString *args) {
+			IMServicePlugInMessage *message = [self roomList];
+			[serviceApplication plugInDidReceiveMessage:message fromHandle:@"console"];
+		});
+		
+		GFCampfireAddBlockCommand(_commands, @"join", @"Joins the specified room(s)", ^(NSString *args) {
+			NSMutableCharacterSet *separators = [NSMutableCharacterSet whitespaceCharacterSet];
+			[separators addCharactersInString:@","];
+			NSArray *roomIds = [args componentsSeparatedByCharactersInSet:separators];
+			for (NSString *roomId in roomIds) {
+				NSString *trimmedRoomId = [roomId stringByTrimmingCharactersInSet:separators];
+				if ([trimmedRoomId length] > 0) {
+					[self joinChatRoom:trimmedRoomId];
+				}
+			}
+		});
+		
+		GFCampfireAddBlockCommand(_commands, @"leave", @"Leaves the specified room(s)", ^(NSString *args) {
+			NSMutableCharacterSet *separators = [NSMutableCharacterSet whitespaceCharacterSet];
+			[separators addCharactersInString:@","];
+			NSArray *roomIds = [args componentsSeparatedByCharactersInSet:separators];
+			for (NSString *roomId in roomIds) {
+				NSString *trimmedRoomId = [roomId stringByTrimmingCharactersInSet:separators];
+				if ([trimmedRoomId length] > 0) {
+					[self leaveRoom:trimmedRoomId];
+				}
+			}
+		});
+		
+		GFCampfireAddBlockCommand(_commands, @"lock", @"Locks the specified room(s)", ^(NSString *args) {
+			NSMutableCharacterSet *separators = [NSMutableCharacterSet whitespaceCharacterSet];
+			[separators addCharactersInString:@","];
+			NSArray *roomIds = [args componentsSeparatedByCharactersInSet:separators];
+			for (NSString *roomId in roomIds) {
+				NSString *trimmedRoomId = [roomId stringByTrimmingCharactersInSet:separators];
+				if ([trimmedRoomId length] > 0) {
+					[self lockRoom:trimmedRoomId];
+				}
+			}
+		});
+		
+		GFCampfireAddBlockCommand(_commands, @"unlock", @"Unlocks the specified room(s)", ^(NSString *args) {
+			NSMutableCharacterSet *separators = [NSMutableCharacterSet whitespaceCharacterSet];
+			[separators addCharactersInString:@","];
+			NSArray *roomIds = [args componentsSeparatedByCharactersInSet:separators];
+			for (NSString *roomId in roomIds) {
+				NSString *trimmedRoomId = [roomId stringByTrimmingCharactersInSet:separators];
+				if ([trimmedRoomId length] > 0) {
+					[self unlockRoom:trimmedRoomId];
+				}
+			}
+		});
+		
+		GFCampfireAddBlockCommand(_commands, @"topic", @"Gets or sets the topic of the room", ^(NSString *args) {
+			NSRange spaceRange = [args rangeOfCharacterFromSet:[NSCharacterSet whitespaceCharacterSet]];
+			NSString *roomId = [args substringToIndex:spaceRange.location];
+			NSString *topic = [args substringFromIndex:NSMaxRange(spaceRange)];
+			if ([topic length] > 0) {
+				
+			} else {
+				
+			}
+		});
+		
+		GFCampfireAddBlockCommand(_commands, @"name", @"Gets or sets the name of the room", ^(NSString *args) {
+			NSRange spaceRange = [args rangeOfCharacterFromSet:[NSCharacterSet whitespaceCharacterSet]];
+			NSString *roomId = [args substringToIndex:spaceRange.location];
+			NSString *name = [args substringFromIndex:NSMaxRange(spaceRange)];
+			if ([name length] > 0) {
+				
+			} else {
+				
+			}
+		});
+		
+		GFCampfireAddBlockCommand(_commands, @"info", @"Displays information about the plugin", ^(NSString *args) {
+			IMServicePlugInMessage *message = [self infoMessage];
+			[serviceApplication plugInDidReceiveMessage:message fromHandle:@"console"];
+		});
 	}
 	
 	return self;
@@ -222,6 +326,9 @@ enum {
 	
 	_networkEngine = [[MKNetworkEngine alloc] initWithHostName:_server customHeaderFields:nil];
 	[_networkEngine performSelector:@selector(setCustomOperationSubclass:) withObject:[GFCampfireOperation class]];
+	[_networkEngine setReachabilityChangedHandler:^(NetworkStatus status) {
+		self.reachable = (status != NotReachable);
+	}];
 }
 
 - (oneway void)login
@@ -288,19 +395,24 @@ enum {
 
 - (oneway void)leaveChatRoom:(NSString *)roomId
 {
+	static BOOL shouldLeaveRemote = NO;
+	if (shouldLeaveRemote) {
+		// Only do a remote leave if user is configured to do so
+		// TODO: find a way to make this a preference
+		[self leaveRoom:roomId];
+	}
+	[self didLeaveRoom:roomId];
+}
+
+- (void)leaveRoom:(NSString *)roomId
+{
 	if (_me && _me.apiAuthToken) {
-		if ([_activeRooms objectForKey:roomId] != nil) {
-			MKNetworkOperation *leaveRoomOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/leave.json", roomId] params:nil httpMethod:@"POST" ssl:_useSSL];
-			[leaveRoomOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
-			[leaveRoomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
-				[self didLeaveRoom:roomId];
-			} onError:^(NSError *error) {
-				[self didLeaveRoom:roomId];
-			}];
-			[_networkEngine enqueueOperation:leaveRoomOperation forceReload:YES];
-		} else {
-			[self didLeaveRoom:roomId];
-		}
+		MKNetworkOperation *leaveRoomOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/leave.json", roomId] params:nil httpMethod:@"POST" ssl:_useSSL];
+		[leaveRoomOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
+		[leaveRoomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+		} onError:^(NSError *error) {
+		}];
+		[_networkEngine enqueueOperation:leaveRoomOperation forceReload:YES];
 	}
 }
 
@@ -313,10 +425,9 @@ enum {
 
 - (oneway void)inviteHandles:(NSArray *)handles toChatRoom:(NSString *)roomName withMessage:(IMServicePlugInMessage *)message
 {
-	NSLog(@"%@", handles);
 }
 
-- (GFCampfireCommand *)commandForMessage:(NSString *)message commands:(NSDictionary *)commands
+- (GFCampfireCommand *)commandForMessage:(NSString *)message
 {
 	GFCampfireCommand *command = nil;
 	if ([message hasPrefix:@"/"]) {
@@ -327,7 +438,7 @@ enum {
 		[c formUnionWithCharacterSet:[NSCharacterSet whitespaceCharacterSet]];
 		[c formUnionWithCharacterSet:[NSCharacterSet newlineCharacterSet]];
 		if ([scanner scanUpToCharactersFromSet:c intoString:&commandString]) {
-			command = [commands objectForKey:commandString];
+			command = [_commands objectForKey:commandString];
 		}
 	}
 	return command;
@@ -349,7 +460,7 @@ enum {
 	if (_me && _me.apiAuthToken) {
 		NSString *messageBody = [message.content string];
 		
-		GFCampfireCommand *command = [self commandForMessage:messageBody commands:_roomCommands];
+		GFCampfireCommand *command = [self commandForMessage:messageBody];
 		if (command) {
 			NSString *args = [self argumentsForCommand:command inMessage:messageBody];
 			[command performActionWithObject:self args:[NSString stringWithFormat:@"%@ %@", roomId, args]];
@@ -386,41 +497,61 @@ enum {
 {
 	GFCampfireUser *user = [_users objectForKey:handle];
 	if (user) {
-		NSString *avatarKey = [NSString stringWithFormat:@"%@%@", handle, identifier];
-		NSData *avatarData = [_avatars objectForKey:avatarKey];
-		if (avatarData == nil) {
-			NSURLRequest *request = [NSURLRequest requestWithURL:user.avatar];
+		if ((user.avatarData == nil && user.avatarURL != nil) ||
+			(user.avatarURL != nil && [[user.avatarURL absoluteString] isEqualToString:identifier] == NO)) {
+//			[_networkEngine imageAtURL:<#(NSURL *)#> onCompletion:<#^(NSImage *fetchedImage, NSURL *url, BOOL isInCache)imageFetchedBlock#>];
+			NSURLRequest *request = [NSURLRequest requestWithURL:user.avatarURL];
 			[NSURLConnection sendAsynchronousRequest:request
 											   queue:[NSOperationQueue mainQueue]
 								   completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
 									   if (error != nil) {
-										   [_avatars setObject:data forKey:avatarKey];
-										   NSDictionary *userProperties = [NSDictionary dictionaryWithObject:data forKey:IMHandlePropertyPictureData];
-										   [serviceApplication plugInDidUpdateProperties:userProperties ofHandle:handle];
+										   user.avatarData = data;
+										   [self userAvatarUpdated:user];
 									   } else {
-										   NSLog(@"error fetching avatar: %@", error);
+										   DDLogError(@"error fetching avatar: %@", error);
 									   }
 								   }];
+		} else {
+			[self userAvatarUpdated:user];
 		}
-	} else {
-//		[serviceApplication plugInDidUpdateProperties:<#(NSDictionary *)#> ofHandle:<#(NSString *)#>];
+	} else if ([handle isEqualToString:@"console"] && [identifier isEqualToString:@"console"]) {
+		NSBundle *bundle = [NSBundle bundleForClass:[self class]];
+		NSURL *url = [bundle URLForImageResource:@"Campfire"];
+		NSData *data = [NSData dataWithContentsOfURL:url];
+		if (data) {
+			NSDictionary *consoleProperties = [NSDictionary dictionaryWithObject:data forKey:IMHandlePropertyPictureData];
+			[serviceApplication plugInDidUpdateProperties:consoleProperties ofHandle:handle];
+		}
+	}
+}
+
+- (void)userAvatarUpdated:(GFCampfireUser *)user
+{
+	if (user.avatarData != nil) {
+		NSDictionary *userProperties = [NSDictionary dictionaryWithObject:user.avatarData forKey:IMHandlePropertyPictureData];
+		[serviceApplication plugInDidUpdateProperties:userProperties ofHandle:user.key];
 	}
 }
 
 #pragma mark -
 #pragma mark IMServicePlugInGroupListSupport
 
-- (oneway void)requestGroupList
+- (void)sendGroupListUpdate
 {
 	NSMutableDictionary *campfireGroup = [NSMutableDictionary dictionary];
-	[campfireGroup setObject:IMGroupListDefaultGroup forKey:IMGroupListNameKey];
+	[campfireGroup setObject:@"Campfire" forKey:IMGroupListNameKey];
 //	[campfireGroup setObject:[NSArray array] forKey:IMGroupListPermissionsKey];
 	[campfireGroup setObject:[NSArray arrayWithObject:@"console"] forKey:IMGroupListHandlesKey];
 	[serviceApplication plugInDidUpdateGroupList:[NSArray arrayWithObject:campfireGroup] error:nil];
+}
+
+- (oneway void)requestGroupList
+{
+	[self sendGroupListUpdate];
 	
 	NSMutableDictionary *properties = [NSMutableDictionary dictionary];
 	[properties setObject:[NSNumber numberWithInteger:IMHandleAvailabilityAvailable] forKey:IMHandlePropertyAvailability];
-//	[properties setObject:<#(id)#> forKey:IMHandlePropertyPictureIdentifier];
+	[properties setObject:@"console" forKey:IMHandlePropertyPictureIdentifier];
 //	[properties setObject:<#(id)#> forKey:IMHandlePropertyStatusMessage];
 	[properties setObject:@"Console" forKey:IMHandlePropertyAlias];
 	[properties setObject:[NSArray arrayWithObjects:IMHandleCapabilityMessaging, IMHandleCapabilityHandlePicture, nil]
@@ -462,7 +593,7 @@ enum {
 	if ([handle isEqualToString:@"console"]) {
 		NSString *messageString = message.content.string;
 		
-		GFCampfireCommand *command = [self commandForMessage:messageString commands:_commands];
+		GFCampfireCommand *command = [self commandForMessage:messageString];
 		if (command) {
 //			[serviceApplication plugInDidSendMessage:message toHandle:handle error:nil];
 			NSString *args = [self argumentsForCommand:command inMessage:messageString];
@@ -544,7 +675,7 @@ enum {
 			}
 			[self updateAllRoomsInformation];
 		} onError:^(NSError *error) {
-			NSLog(@"%@", error);
+			DDLogError(@"%@", error);
 		}];
 		[_networkEngine enqueueOperation:roomListOperation forceReload:YES];
 	}
@@ -567,7 +698,7 @@ enum {
 				[serviceApplication plugInDidReceiveInvitation:message forChatRoom:room.roomKey fromHandle:nil/*@"console"*/];
 			}
 		} onError:^(NSError *error) {
-			NSLog(@"%@", error);
+			DDLogError(@"%@", error);
 		}];
 		[_networkEngine enqueueOperation:usersRooms forceReload:YES];
 	}
@@ -583,7 +714,7 @@ enum {
 			GFCampfireRoom *room = [GFJSONObject objectWithDictionary:json];
 			[self updateInformationForRoom:room didJoin:didJoin];
 		} onError:^(NSError *error) {
-			NSLog(@"%@", error);
+			DDLogError(@"%@", error);
 		}];
 		[_networkEngine enqueueOperation:roomOperation forceReload:YES];
 	}
@@ -620,7 +751,7 @@ enum {
 			[self processHistoryMessages:messages];
 		} onError:^(NSError *error) {
 			// couldn't fetch recents, do I care?
-			NSLog(@"%@", error);
+			DDLogError(@"%@", error);
 		}];
 		[_networkEngine enqueueOperation:recentMessagesOperation forceReload:YES];
 	}
@@ -758,9 +889,8 @@ enum {
 		[userInfo setObject:user.name forKey:IMHandlePropertyAlias];
 		[userInfo setObject:user.emailAddress forKey:IMHandlePropertyEmailAddress];
 		[userInfo setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, nil] forKey:IMHandlePropertyCapabilities];
-		if (user.avatar) {
-			NSString *avatarKey = [NSString stringWithFormat:@"%@%@", user.userKey, [user.avatar absoluteString]];
-			[userInfo setObject:avatarKey forKey:IMHandlePropertyPictureIdentifier];
+		if (user.avatarURL) {
+			[userInfo setObject:[user.avatarURL absoluteString] forKey:IMHandlePropertyPictureIdentifier];
 		}
 		
 		NSInteger userStatus = IMHandleAvailabilityUnknown;
@@ -785,10 +915,7 @@ enum {
 		NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
 		[userInfo setObject:@"Console" forKey:IMHandlePropertyAlias];
 		[userInfo setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, IMHandleCapabilityMessaging, nil] forKey:IMHandlePropertyCapabilities];
-		if (user.avatar) {
-			NSString *avatarKey = [NSString stringWithFormat:@"%@%@", user.userKey, [user.avatar absoluteString]];
-			[userInfo setObject:avatarKey forKey:IMHandlePropertyPictureIdentifier];
-		}
+		[userInfo setObject:@"console" forKey:IMHandlePropertyPictureIdentifier];
 		
 		[userInfo setObject:[NSNumber numberWithInteger:IMHandleAvailabilityAvailable] forKey:IMHandlePropertyAvailability];
 		
@@ -808,7 +935,7 @@ enum {
 				[self updateInformationForUser:user];
 			} onError:^(NSError *error) {
 				// couldn't fetch user, do I care?
-				NSLog(@"%@", error);
+				DDLogError(@"%@", error);
 			}];
 			[_networkEngine enqueueOperation:getUserOperation forceReload:YES];
 		} else {
@@ -834,9 +961,9 @@ enum {
 	
 	NSError *error = nil;
 	if (![asyncSocket connectToHost:host onPort:port error:&error]) {
-		NSLog(@"Could not connect to %@", host);
+		DDLogError(@"Could not connect to %@", host);
 	} else {
-		NSLog(@"Connecting to %@...", host);
+		DDLogInfo(@"Connecting to %@...", host);
 	}
 	
 	if (_useSSL) {
@@ -858,9 +985,12 @@ enum {
 #pragma mark -
 #pragma mark GCDAsyncSocketDelegate
 
-- (void)socketDidSecure:(__unsafe_unretained GCDAsyncSocket *)sock
+- (void)socketDidSecure:(__unsafe_unretained GCDAsyncSocket *)socket
 {
-	NSLog(@"socket secured");
+	NSString *roomId = [self roomIdForSocket:socket];
+	if (roomId) {
+		DDLogInfo(@"Socket secured for room %@", roomId);
+	}
 }
 
 - (void)socket:(__unsafe_unretained GCDAsyncSocket *)socket didConnectToHost:(__unsafe_unretained NSString *)hostName port:(UInt16)port
@@ -880,8 +1010,6 @@ enum {
 		CFHTTPMessageAddAuthentication(request, NULL, (__bridge CFStringRef)_me.apiAuthToken, CFSTR("X"), kCFHTTPAuthenticationSchemeBasic, false);
 		
 		CFDataRef requestData = CFHTTPMessageCopySerializedMessage(request);
-		NSString *requestString = [[NSString alloc] initWithData:(__bridge NSData *)requestData encoding:NSUTF8StringEncoding];
-		NSLog(@"Stream header: %@", requestString);
 		
 		[socket writeData:(__bridge NSData *)requestData withTimeout:-1.0 tag:0];
 		
@@ -890,11 +1018,12 @@ enum {
 	}
 }
 
-- (void)socket:(__unsafe_unretained GCDAsyncSocket *)sock didReadData:(__unsafe_unretained NSData *)data withTag:(long)tag
+- (void)socket:(__unsafe_unretained GCDAsyncSocket *)socket didReadData:(__unsafe_unretained NSData *)data withTag:(long)tag
 {
+	NSString *roomId = [self roomIdForSocket:socket];
 	NSString *stringDataWithCRLF = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
 	if (tag == 0) {
-		NSLog(@"%@", stringDataWithCRLF);
+		DDLogInfo(@"Received header for streaming room %@ - %@", roomId, stringDataWithCRLF);
 		if ([stringDataWithCRLF hasSuffix:@"\r\n\r\n"]) {
 			NSString *httpHeader = [stringDataWithCRLF substringToIndex:([stringDataWithCRLF length] - 4)];
 			NSArray *httpHeaderParts = [httpHeader componentsSeparatedByString:@"\r\n"];
@@ -943,7 +1072,7 @@ enum {
 		}
 	}
 	
-	[sock readDataToData:[GCDAsyncSocket CRLFData] withTimeout:5.0 tag:1];
+	[socket readDataToData:[GCDAsyncSocket CRLFData] withTimeout:5.0 tag:1];
 }
 
 - (NSTimeInterval)socket:(GCDAsyncSocket *)sock shouldTimeoutReadWithTag:(long)tag elapsed:(NSTimeInterval)elapsed bytesDone:(NSUInteger)length
@@ -954,10 +1083,15 @@ enum {
 
 - (void)socketDidDisconnect:(__unsafe_unretained GCDAsyncSocket *)sock withError:(__unsafe_unretained NSError *)err
 {
-	NSLog(@"Socket disconnected with error: %@", err);
+	DDLogWarn(@"Socket disconnected with error: %@", err);
 	NSString *roomId = [self roomIdForSocket:sock];
 	if (roomId) {
 		[serviceApplication plugInDidLeaveChatRoom:roomId error:err];
+		
+		if (self.reachable) {
+			// TODO: test/enable this
+//			[self didJoinRoom:roomId];
+		}
 	}
 }
 

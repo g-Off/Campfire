@@ -19,17 +19,27 @@
 @synthesize starred;
 
 /*
+ {
+	 "body": <null>,
+	 "created_at": "2012/02/26 22:02:10 +0000",
+	 "id": 509928543,
+	 "room_id": 474752,
+	 "starred": "false",
+	 "type": "EnterMessage",
+	 "user_id": 509886,
+ }
+
  <message>
- <id type="integer">1</id>
- <room-id type="integer">1</room-id>
- <user-id type="integer">2</user-id>
- <body>Hello Room</body>
- <created-at type="datetime">2009-11-22T23:46:58Z</created-at>
- <type>#{TextMessage || PasteMessage || SoundMessage || AdvertisementMessage ||
- AllowGuestsMessage || DisallowGuestsMessage || IdleMessage || KickMessage ||
- LeaveMessage || SystemMessage || TimestampMessage || TopicChangeMessage ||
- UnidleMessage || UnlockMessage || UploadMessage || EnterMessage}</type>
- <starred>true</starred>
+	 <id type="integer">1</id>
+	 <room-id type="integer">1</room-id>
+	 <user-id type="integer">2</user-id>
+	 <body>Hello Room</body>
+	 <created-at type="datetime">2009-11-22T23:46:58Z</created-at>
+	 <type>#{TextMessage || PasteMessage || SoundMessage || AdvertisementMessage ||
+	 AllowGuestsMessage || DisallowGuestsMessage || IdleMessage || KickMessage ||
+	 LeaveMessage || SystemMessage || TimestampMessage || TopicChangeMessage ||
+	 UnidleMessage || UnlockMessage || UploadMessage || EnterMessage}</type>
+	 <starred>true</starred>
  </message>
  */
 
