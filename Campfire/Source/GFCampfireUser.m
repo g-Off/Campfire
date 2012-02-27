@@ -10,14 +10,35 @@
 
 @implementation GFCampfireUser
 
++ (NSDictionary *)jsonMapping
+{
+	return [NSDictionary dictionaryWithObjectsAndKeys:
+			@"name", @"name",
+			@"email_address", @"emailAddress",
+			@"admin", @"admin",
+			@"avatar_url", @"avatarURL",
+			@"id", @"userId",
+			@"api_auth_token", @"apiAuthToken",
+			nil];
+}
+
++ (NSDictionary *)valueTransformers
+{
+	return [NSDictionary dictionaryWithObjectsAndKeys:
+			@"GFJSONURLValueTransformer", @"avatarURL",
+			nil];
+}
+
 @synthesize name;
 @synthesize emailAddress;
 @synthesize admin;
 @synthesize createdAt;
 @synthesize type;
-@synthesize avatar;
+@synthesize avatarURL;
 @synthesize userId;
 @synthesize apiAuthToken;
+
+@synthesize avatarData;
 
 /*
  {
@@ -34,16 +55,18 @@
  }
  */
 
-- (void)updateWithDictionary:(NSDictionary *)dict
+- (id)JSONRepresentation
 {
-	self.name = [dict objectForKey:@"name"];
-	self.emailAddress = [dict objectForKey:@"email_address"];
-	self.admin = [(NSNumber *)[dict objectForKey:@"admin"] boolValue];
-//	self.createdAt = 
-//	self.type
-	self.avatar = [NSURL URLWithString:[dict objectForKey:@"avatar_url"]];
-	self.userId = [(NSNumber *)[dict objectForKey:@"id"] integerValue];
-	self.apiAuthToken = [dict objectForKey:@"api_auth_token"];
+	NSMutableDictionary *dict;
+	[[[self class] jsonMapping] enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+		NSString *propertyName = key;
+		NSString *jsonKey = obj;
+		
+		
+		id theObj = [self valueForKey:propertyName];
+		
+		[dict setObject:theObj forKey:jsonKey];
+	}];
 }
 
 - (void)updateWithObject:(GFCampfireUser *)obj
@@ -68,7 +91,7 @@
 	self.admin = user.admin;
 	self.createdAt = user.createdAt;
 	self.type = user.type;
-	self.avatar = user.avatar;
+	self.avatarURL = user.avatarURL;
 	
 	if (user.apiAuthToken) {
 		self.apiAuthToken = user.apiAuthToken;

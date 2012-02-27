@@ -19,6 +19,16 @@
 
 @implementation GFJSONObject
 
++ (NSDictionary *)jsonMapping
+{
+	return nil;
+}
+
++ (NSDictionary *)valueTransformers
+{
+	return nil;
+}
+
 + (Class)classForType:(NSString *)type
 {
 	Class cls = Nil;
@@ -55,55 +65,6 @@
 + (void)registerClassPrefix:(NSString *)prefix
 {
 	[[self registeredClassPrefixes] addObject:prefix];
-}
-
-+ (NSString *)propertyNameForKey:(NSString *)key
-{
-	unsigned int propertyCount = 0;
-	objc_property_t *properties = class_copyPropertyList(self, &propertyCount);
-	
-	for (unsigned int i = 0; i < propertyCount; ++i) {
-		objc_property_t property = properties[i];
-		const char *propertyName = property_getName(property);
-		
-		//class_getProperty(self, name)
-		
-		
-	}
-	
-	if ([key isEqualToString:@"id"]) {
-		__block NSString *idPrefix = nil;
-		[[self registeredClassPrefixes] enumerateObjectsUsingBlock:^(NSString *classPrefix, BOOL *stop) {
-			if ([NSStringFromClass(self) hasPrefix:classPrefix]) {
-				idPrefix = [NSStringFromClass(self) substringFromIndex:[classPrefix length]];
-				*stop = YES;
-			}
-		}];
-		
-		if (idPrefix) {
-			[idPrefix stringByAppendingString:@"Id"];
-			[idPrefix stringByAppendingString:@"ID"];
-			[idPrefix stringByAppendingString:@"Identifier"];
-		}
-	} else {
-		NSCharacterSet *seperatorCharacterSet = [NSCharacterSet characterSetWithCharactersInString:@"-_"];
-		NSArray *components = [key componentsSeparatedByCharactersInSet:seperatorCharacterSet];
-		if ([components count] > 1) {
-			NSMutableString *combinedKey = [NSMutableString stringWithCapacity:[key length]];
-			[components enumerateObjectsUsingBlock:^(NSString *keyComponent, NSUInteger idx, BOOL *stop) {
-				if (idx > 0) {
-					[combinedKey appendString:keyComponent];
-				} else {
-					[combinedKey appendString:[[keyComponent substringToIndex:1] uppercaseString]];
-					[combinedKey appendString:[keyComponent substringFromIndex:1]];
-				}
-			}];
-		} else {
-			
-		}
-	}
-	
-//	objc_property_t property = class_getProperty(self, <#const char *name#>)
 }
 
 + (id)objectWithDictionary:(NSDictionary *)dict
@@ -146,8 +107,25 @@
 
 - (void)updateWithDictionary:(NSDictionary *)dict
 {
+	NSDictionary *nameMapping = [[self class] jsonMapping];
+	NSDictionary *valueTransformers = [[self class] valueTransformers];
 	[dict enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL *stop) {
-		
+		NSString *jsonKey = key;
+		NSString *propertyName = [[nameMapping allKeysForObject:jsonKey] lastObject];
+		if (propertyName) {		
+			if ([obj isEqual:[NSNull null]]) {
+				obj = nil;
+			}
+			
+			NSString *transformerName = [valueTransformers objectForKey:propertyName];
+			if (transformerName) {
+				NSValueTransformer *transformer = [NSValueTransformer valueTransformerForName:transformerName];
+				if (transformer) {
+					obj = [transformer transformedValue:obj];
+				}
+			}
+			[self setValue:obj forKey:propertyName];
+		}
 	}];
 }
 

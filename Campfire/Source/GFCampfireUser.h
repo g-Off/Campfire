@@ -21,7 +21,8 @@ typedef enum {
 @property (assign, getter = isAdmin) BOOL admin;
 @property (strong) NSDate *createdAt;
 @property (assign) GFCampfireUserType *type;
-@property (strong) NSURL *avatar;
+@property (strong) NSURL *avatarURL;
+@property (strong) NSData *avatarData;
 @property (assign) NSInteger userId;
 @property (strong) NSString *apiAuthToken;
 

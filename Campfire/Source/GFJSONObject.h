@@ -10,14 +10,15 @@
 
 @interface GFJSONObject : NSObject
 
++ (NSDictionary *)jsonMapping;
++ (NSDictionary *)valueTransformers;
+
 + (void)registerClassPrefix:(NSString *)prefix;
 
 + (id)objectWithDictionary:(NSDictionary *)dict;
-
 - (id)initWithDictionary:(NSDictionary *)dict;
 
 - (void)updateWithDictionary:(NSDictionary *)dict;
-
 - (void)updateWithObject:(GFJSONObject *)obj;
 
 - (id)JSONRepresentation;
