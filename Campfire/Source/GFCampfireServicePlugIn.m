@@ -499,16 +499,18 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	if (user) {
 		if ((user.avatarData == nil && user.avatarURL != nil) ||
 			(user.avatarURL != nil && [[user.avatarURL absoluteString] isEqualToString:identifier] == NO)) {
-//			[_networkEngine imageAtURL:<#(NSURL *)#> onCompletion:<#^(NSImage *fetchedImage, NSURL *url, BOOL isInCache)imageFetchedBlock#>];
+//			[_networkEngine imageAtURL:user.avatarURL onCompletion:^(NSImage *fetchedImage, NSURL *url, BOOL isInCache) {
+//				
+//			}];
 			NSURLRequest *request = [NSURLRequest requestWithURL:user.avatarURL];
 			[NSURLConnection sendAsynchronousRequest:request
 											   queue:[NSOperationQueue mainQueue]
 								   completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
-									   if (error != nil) {
+									   if (data != nil && error == nil) {
 										   user.avatarData = data;
 										   [self userAvatarUpdated:user];
 									   } else {
-										   DDLogError(@"error fetching avatar: %@", error);
+										   DDLogError(@"Error fetching avatar: %@", error);
 									   }
 								   }];
 		} else {
@@ -529,7 +531,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 {
 	if (user.avatarData != nil) {
 		NSDictionary *userProperties = [NSDictionary dictionaryWithObject:user.avatarData forKey:IMHandlePropertyPictureData];
-		[serviceApplication plugInDidUpdateProperties:userProperties ofHandle:user.key];
+		[serviceApplication plugInDidUpdateProperties:userProperties ofHandle:user.userKey];
 	}
 }
 
