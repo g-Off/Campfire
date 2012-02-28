@@ -91,7 +91,10 @@
 	self.admin = user.admin;
 	self.createdAt = user.createdAt;
 	self.type = user.type;
-	self.avatarURL = user.avatarURL;
+	
+	if (user.avatarURL) {
+		self.avatarURL = user.avatarURL;
+	}
 	
 	if (user.apiAuthToken) {
 		self.apiAuthToken = user.apiAuthToken;

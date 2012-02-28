@@ -333,6 +333,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 
 - (oneway void)login
 {
+	DDLogInfo(@"================================================================================");
 	MKNetworkOperation *loginOperation = [_networkEngine operationWithPath:@"users/me.json" params:nil httpMethod:@"GET" ssl:_useSSL];
 	[loginOperation setUsername:_username password:_password basicAuth:YES];
 	[loginOperation onCompletion:^(MKNetworkOperation *completedOperation) {
@@ -554,7 +555,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	NSMutableDictionary *properties = [NSMutableDictionary dictionary];
 	[properties setObject:[NSNumber numberWithInteger:IMHandleAvailabilityAvailable] forKey:IMHandlePropertyAvailability];
 	[properties setObject:@"console" forKey:IMHandlePropertyPictureIdentifier];
-//	[properties setObject:<#(id)#> forKey:IMHandlePropertyStatusMessage];
+	[properties setObject:@"Execute Campfire commands here. Use /help for help." forKey:IMHandlePropertyStatusMessage];
 	[properties setObject:@"Console" forKey:IMHandlePropertyAlias];
 	[properties setObject:[NSArray arrayWithObjects:IMHandleCapabilityMessaging, IMHandleCapabilityHandlePicture, nil]
 				   forKey:IMHandlePropertyCapabilities];
@@ -778,35 +779,38 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 
 - (void)processMessage:(GFCampfireMessage *)message historyMessage:(BOOL)isHistoryMessage streamMessage:(BOOL)isStreamMessage
 {
-	if (message.body && message.userId != NSNotFound) {
+	if (message.roomId != NSNotFound) {
 		NSString *roomId = [[NSNumber numberWithInteger:message.roomId] stringValue];
 		NSString *userId = nil;
 		if (message.userId != NSNotFound) {
 			userId = [[NSNumber numberWithInteger:message.userId] stringValue];
-		}
-		
-		if (message.type == GFCampfireMessageTypeText || message.type == GFCampfireMessageTypePaste) {
-			NSMutableAttributedString *messageString = [[NSMutableAttributedString alloc] initWithString:message.body];
-			if (message.type == GFCampfireMessageTypePaste) {
-				[messageString setAttributes:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:IMAttributePreformatted] range:NSMakeRange(0, [messageString length])];
+				
+			if (message.type == GFCampfireMessageTypeLeave || message.type == GFCampfireMessageTypeKick) {
+				[serviceApplication handles:[NSArray arrayWithObject:userId] didLeaveChatRoom:roomId];
+			} else if (message.type == GFCampfireMessageTypeEnter) {
+				[serviceApplication handles:[NSArray arrayWithObject:userId] didJoinChatRoom:roomId];
+				[self getRemoteUserInfo:userId];
+			} else if (message.type == GFCampfireMessageTypeTopicChange) {
+				[serviceApplication plugInDidReceiveNotice:message.body forChatRoom:roomId];
+			} else if (message.type == GFCampfireMessageTypeText || message.type == GFCampfireMessageTypePaste) {
+				if (message.body != nil) {
+					NSMutableAttributedString *messageString = [[NSMutableAttributedString alloc] initWithString:message.body];
+					if (message.type == GFCampfireMessageTypePaste) {
+						[messageString setAttributes:[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:IMAttributePreformatted] range:NSMakeRange(0, [messageString length])];
+					}
+					IMServicePlugInMessage *pluginMessage = [IMServicePlugInMessage servicePlugInMessageWithContent:messageString];
+					
+					
+					[self getRemoteUserInfo:userId];
+					if (message.userId == _me.userId) {
+//						if (!isHistoryMessage && !isStreamMessage) {
+//							[serviceApplication plugInDidSendMessage:pluginMessage toChatRoom:roomId error:nil];
+//						}
+					} else {
+						[serviceApplication plugInDidReceiveMessage:pluginMessage forChatRoom:roomId fromHandle:userId];
+					}
+				}
 			}
-			IMServicePlugInMessage *pluginMessage = [IMServicePlugInMessage servicePlugInMessageWithContent:messageString];
-			
-			
-			[self getRemoteUserInfo:userId];
-			if (message.userId == _me.userId) {
-//				if (!isHistoryMessage && !isStreamMessage) {
-//					[serviceApplication plugInDidSendMessage:pluginMessage toChatRoom:roomId error:nil];
-//				}
-			} else {
-				[serviceApplication plugInDidReceiveMessage:pluginMessage forChatRoom:roomId fromHandle:userId];
-			}
-		} else if (message.type == GFCampfireMessageTypeLeave || message.type == GFCampfireMessageTypeKick) {
-			[serviceApplication handles:[NSArray arrayWithObject:userId] didLeaveChatRoom:roomId];
-		} else if (message.type == GFCampfireMessageTypeEnter) {
-			[serviceApplication handles:[NSArray arrayWithObject:userId] didJoinChatRoom:roomId];
-		} else if (message.type == GFCampfireMessageTypeTopicChange) {
-			[serviceApplication plugInDidReceiveNotice:message.body forChatRoom:roomId];
 		}
 		
 		[[NSUserDefaults standardUserDefaults] setObject:message.messageKey forKey:[NSString stringWithFormat:@"Campfire-%@", roomId]];
@@ -1089,7 +1093,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 
 - (void)socketDidDisconnect:(__unsafe_unretained GCDAsyncSocket *)sock withError:(__unsafe_unretained NSError *)err
 {
-	NSString *roomId = [self roomIdForSocket:sock];
+	NSString *roomId = [self roomIdForSocket:sock]; //error code = 4, domain = GCDAsyncSocketErrorDomain == timeout
 	DDLogWarn(@"Socket for room %@ disconnected with error: %@", roomId, err);
 	if (roomId) {
 		[serviceApplication plugInDidLeaveChatRoom:roomId error:err];
