@@ -18,12 +18,16 @@
 
 - (NSArray *)jsonStrings
 {
+	NSUInteger rootJSONIndex = 0;
 	BOOL inRootJSON = NO;
 	NSUInteger braceCount = 0;
 	NSMutableArray *jsonStrings = [NSMutableArray array];
 	for (NSUInteger i = 0; i < [self length]; ++i) {
 		unichar c = [self characterAtIndex:i];
 		if (c == '{') {
+			if (inRootJSON == NO) {
+				rootJSONIndex = i;
+			}
 			inRootJSON = YES;
 			++braceCount;
 		} else if (c == '}') {
@@ -32,7 +36,7 @@
 		
 		if (braceCount == 0 && inRootJSON) {
 			inRootJSON = NO;
-			NSString *jsonString = [self substringToIndex:i + 1];
+			NSString *jsonString = [self substringWithRange:NSMakeRange(rootJSONIndex, i - rootJSONIndex + 1)];
 			[jsonStrings addObject:jsonString];
 		}
 	}
