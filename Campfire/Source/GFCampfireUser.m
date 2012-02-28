@@ -106,6 +106,11 @@
 	return [[NSNumber numberWithInteger:self.userId] stringValue];
 }
 
+- (NSString *)avatarKey
+{
+	return [NSString stringWithFormat:@"%@_%@",self.userKey, [self.avatarURL absoluteString]];
+}
+
 - (NSUInteger)hash
 {
 	return self.userId;

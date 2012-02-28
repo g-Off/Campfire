@@ -29,5 +29,6 @@ typedef enum {
 - (void)updateWithUser:(GFCampfireUser *)user;
 
 - (NSString *)userKey;
+- (NSString *)avatarKey;
 
 @end

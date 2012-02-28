@@ -46,7 +46,6 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 @interface GFCampfireServicePlugIn () <GCDAsyncSocketDelegate>
 
 - (void)updateInformationForRoom:(GFCampfireRoom *)room didJoin:(BOOL)didJoin;
-- (void)updateAllRoomsInformation;
 - (void)getUserRooms;
 - (void)getAllRooms;
 
@@ -498,8 +497,8 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 {
 	GFCampfireUser *user = [_users objectForKey:handle];
 	if (user) {
-		if ((user.avatarData == nil && user.avatarURL != nil) ||
-			(user.avatarURL != nil && [[user.avatarURL absoluteString] isEqualToString:identifier] == NO)) {
+		if ((user.avatarData == nil && user.avatarURL != nil)/* ||
+			(user.avatarURL != nil && [user.avatarKey isEqualToString:identifier] == NO)*/) {
 //			[_networkEngine imageAtURL:user.avatarURL onCompletion:^(NSImage *fetchedImage, NSURL *url, BOOL isInCache) {
 //				
 //			}];
@@ -514,10 +513,18 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 										   DDLogError(@"Error fetching avatar: %@", error);
 									   }
 								   }];
+//			NSError *error = nil;
+//			NSURLResponse *response = nil;
+//			NSData *pictureData = [NSURLConnection sendSynchronousRequest:request
+//														returningResponse:&response
+//																	error:&error];
+//			if (pictureData) {
+//				user.avatarData = pictureData;
+//			}
 		} else {
 			[self userAvatarUpdated:user];
 		}
-	} else if ([handle isEqualToString:@"console"] && [identifier isEqualToString:@"console"]) {
+	} else if ([handle isEqualToString:@"console"]) {
 		NSBundle *bundle = [NSBundle bundleForClass:[self class]];
 		NSURL *url = [bundle URLForImageResource:@"Campfire"];
 		NSData *data = [NSData dataWithContentsOfURL:url];
@@ -544,7 +551,9 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	NSMutableDictionary *campfireGroup = [NSMutableDictionary dictionary];
 	[campfireGroup setObject:@"Campfire" forKey:IMGroupListNameKey];
 //	[campfireGroup setObject:[NSArray array] forKey:IMGroupListPermissionsKey];
-	[campfireGroup setObject:[NSArray arrayWithObject:@"console"] forKey:IMGroupListHandlesKey];
+	NSMutableArray *handles = [NSMutableArray arrayWithObject:@"console"];
+//	[handles addObjectsFromArray:_users.allKeys];
+	[campfireGroup setObject:handles forKey:IMGroupListHandlesKey];
 	[serviceApplication plugInDidUpdateGroupList:[NSArray arrayWithObject:campfireGroup] error:nil];
 }
 
@@ -554,7 +563,11 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	
 	NSMutableDictionary *properties = [NSMutableDictionary dictionary];
 	[properties setObject:[NSNumber numberWithInteger:IMHandleAvailabilityAvailable] forKey:IMHandlePropertyAvailability];
-	[properties setObject:@"console" forKey:IMHandlePropertyPictureIdentifier];
+	CFUUIDRef uuidRef = CFUUIDCreate(kCFAllocatorDefault);
+	CFStringRef uuidString = CFUUIDCreateString(kCFAllocatorDefault, uuidRef);
+	[properties setObject:(__bridge NSString *)uuidString forKey:IMHandlePropertyPictureIdentifier];
+	CFRelease(uuidString);
+	CFRelease(uuidRef);
 	[properties setObject:@"Execute Campfire commands here. Use /help for help." forKey:IMHandlePropertyStatusMessage];
 	[properties setObject:@"Console" forKey:IMHandlePropertyAlias];
 	[properties setObject:[NSArray arrayWithObjects:IMHandleCapabilityMessaging, IMHandleCapabilityHandlePicture, nil]
@@ -568,14 +581,6 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 
 - (oneway void)updateSessionProperties:(NSDictionary *)properties
 {
-	/*
-	 Available keys include:
-	 IMSessionPropertyAvailability   - the user's availablility
-	 IMSessionPropertyStatusMessage  - the user's status message
-	 IMSessionPropertyPictureData    - the user's icon
-	 IMSessionPropertyIdleDate       - the time of the last user activity
-	 IMSessionPropertyIsInvisible    - If YES, the user wishes to appear offline to other users
-	 */
 }
 
 #pragma mark -
@@ -583,12 +588,10 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 
 - (oneway void)userDidStartTypingToHandle:(NSString *)handle
 {
-	
 }
 
 - (oneway void)userDidStopTypingToHandle:(NSString *)handle
 {
-	
 }
 
 - (oneway void)sendMessage:(IMServicePlugInMessage *)message toHandle:(NSString *)handle
@@ -598,7 +601,6 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 		
 		GFCampfireCommand *command = [self commandForMessage:messageString];
 		if (command) {
-//			[serviceApplication plugInDidSendMessage:message toHandle:handle error:nil];
 			NSString *args = [self argumentsForCommand:command inMessage:messageString];
 			[command performActionWithObject:self args:args];
 		} else {
@@ -619,45 +621,6 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 #pragma mark -
 #pragma mark Helper Methods
 
-- (void)updateRoomInformation:(GFCampfireRoom *)room
-{
-	NSMutableDictionary *properties = [NSMutableDictionary dictionary];
-	NSNumber *roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityAvailable];
-	if (room.locked) {
-		roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityOffline];
-	} else if (room.full) {
-		roomStatus = [NSNumber numberWithInteger:IMHandleAvailabilityAway];
-	}
-	
-	[properties setObject:roomStatus forKey:IMHandlePropertyAvailability];
-	[properties setObject:room.topic forKey:IMHandlePropertyStatusMessage];
-	[properties setObject:room.name forKey:IMHandlePropertyAlias];
-	if (room.full == NO && room.locked == NO) {
-		[properties setObject:IMHandleCapabilityChatRoom forKey:IMHandlePropertyCapabilities];
-	}
-	
-	/*
-	 IMHandlePropertyAvailability      - The IMHandleAvailability of the handle
-	 IMHandlePropertyStatusMessage     - Current status message as plaintext NSString
-	 IMHandlePropertyIdleDate          - The time of the last user activity
-	 IMHandlePropertyAlias             - A "prettier" version of the handle, if available
-	 IMHandlePropertyFirstName         - The first name (given name) of a handle
-	 IMHandlePropertyLastName          - The last name (family name) of a handle
-	 IMHandlePropertyEmailAddress      - The e-mail address for a handle
-	 IMHandlePropertyPictureIdentifier - A unique identifier for the handle's picture
-	 IMHandlePropertyCapabilities      - The capabilities of the handle
-	 */
-	
-	[serviceApplication plugInDidUpdateProperties:properties ofHandle:room.roomKey];
-}
-
-- (void)updateAllRoomsInformation
-{
-	for (GFCampfireRoom *room in _rooms.objectEnumerator) {
-		[self updateRoomInformation:room];
-	}
-}
-
 - (void)getAllRooms
 {
 	if (_me && _me.apiAuthToken) {
@@ -668,6 +631,9 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 			NSArray *allRooms = [GFJSONObject objectWithDictionary:json];
 			
 			for (GFCampfireRoom *room in allRooms) {
+				for (GFCampfireUser *user in room.users) {
+					[self updateInformationForUser:user];
+				}
 				GFCampfireRoom *existingRoom = [_rooms objectForKey:room.roomKey];
 				if (existingRoom) {
 					// update existing room
@@ -676,7 +642,6 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 					[_rooms setObject:room forKey:room.roomKey];
 				}
 			}
-			[self updateAllRoomsInformation];
 		} onError:^(NSError *error) {
 			DDLogError(@"Error fetching rooms, %@", error);
 		}];
@@ -890,13 +855,19 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 		[_users setObject:user forKey:user.userKey];
 	}
 	
-	if (triggersUpdate) {
+//	if (triggersUpdate) {
 		NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
 		[userInfo setObject:user.name forKey:IMHandlePropertyAlias];
 		[userInfo setObject:user.emailAddress forKey:IMHandlePropertyEmailAddress];
 		[userInfo setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, nil] forKey:IMHandlePropertyCapabilities];
 		if (user.avatarURL) {
-			[userInfo setObject:[user.avatarURL absoluteString] forKey:IMHandlePropertyPictureIdentifier];
+			CFUUIDRef uuidRef = CFUUIDCreate(kCFAllocatorDefault);
+			CFStringRef uuidString = CFUUIDCreateString(kCFAllocatorDefault, uuidRef);
+			
+			[userInfo setObject:(__bridge NSString *)uuidString forKey:IMHandlePropertyPictureIdentifier];
+			CFRelease(uuidString);
+			CFRelease(uuidRef);
+//			[userInfo setObject:user.avatarKey forKey:IMHandlePropertyPictureIdentifier];
 		}
 		
 		NSInteger userStatus = IMHandleAvailabilityUnknown;
@@ -909,7 +880,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 		[userInfo setObject:[NSNumber numberWithInteger:userStatus] forKey:IMHandlePropertyAvailability];
 		
 		[serviceApplication plugInDidUpdateProperties:userInfo ofHandle:user.userKey];
-	}
+//	}
 }
 
 - (void)updateInformationForUserId:(NSString *)userKey
@@ -921,7 +892,12 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 		NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
 		[userInfo setObject:@"Console" forKey:IMHandlePropertyAlias];
 		[userInfo setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, IMHandleCapabilityMessaging, nil] forKey:IMHandlePropertyCapabilities];
-		[userInfo setObject:@"console" forKey:IMHandlePropertyPictureIdentifier];
+		CFUUIDRef uuidRef = CFUUIDCreate(kCFAllocatorDefault);
+		CFStringRef uuidString = CFUUIDCreateString(kCFAllocatorDefault, uuidRef);
+		
+		[userInfo setObject:(__bridge NSString *)uuidString forKey:IMHandlePropertyPictureIdentifier];
+		CFRelease(uuidString);
+		CFRelease(uuidRef);
 		
 		[userInfo setObject:[NSNumber numberWithInteger:IMHandleAvailabilityAvailable] forKey:IMHandlePropertyAvailability];
 		
