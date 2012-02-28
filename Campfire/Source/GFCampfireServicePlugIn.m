@@ -508,7 +508,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 								   completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
 									   if (data != nil && error == nil) {
 										   user.avatarData = data;
-										   [self userAvatarUpdated:user];
+										   [self userAvatarUpdated:user withIdentifier:identifier];
 									   } else {
 										   DDLogError(@"Error fetching avatar: %@", error);
 									   }
@@ -522,23 +522,29 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 //				user.avatarData = pictureData;
 //			}
 		} else {
-			[self userAvatarUpdated:user];
+			[self userAvatarUpdated:user withIdentifier:identifier];
 		}
 	} else if ([handle isEqualToString:@"console"]) {
 		NSBundle *bundle = [NSBundle bundleForClass:[self class]];
 		NSURL *url = [bundle URLForImageResource:@"Campfire"];
 		NSData *data = [NSData dataWithContentsOfURL:url];
 		if (data) {
-			NSDictionary *consoleProperties = [NSDictionary dictionaryWithObject:data forKey:IMHandlePropertyPictureData];
+			NSDictionary *consoleProperties = [NSDictionary dictionaryWithObjectsAndKeys:
+											   data, IMHandlePropertyPictureData,
+											   identifier, IMHandlePropertyPictureIdentifier,
+											   nil];
 			[serviceApplication plugInDidUpdateProperties:consoleProperties ofHandle:handle];
 		}
 	}
 }
 
-- (void)userAvatarUpdated:(GFCampfireUser *)user
+- (void)userAvatarUpdated:(GFCampfireUser *)user withIdentifier:(NSString *)identifier
 {
 	if (user.avatarData != nil) {
-		NSDictionary *userProperties = [NSDictionary dictionaryWithObject:user.avatarData forKey:IMHandlePropertyPictureData];
+		NSDictionary *userProperties = [NSDictionary dictionaryWithObjectsAndKeys:
+										user.avatarData, IMHandlePropertyPictureData,
+										identifier, IMHandlePropertyPictureIdentifier,
+										nil];
 		[serviceApplication plugInDidUpdateProperties:userProperties ofHandle:user.userKey];
 	}
 }
@@ -563,11 +569,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	
 	NSMutableDictionary *properties = [NSMutableDictionary dictionary];
 	[properties setObject:[NSNumber numberWithInteger:IMHandleAvailabilityAvailable] forKey:IMHandlePropertyAvailability];
-	CFUUIDRef uuidRef = CFUUIDCreate(kCFAllocatorDefault);
-	CFStringRef uuidString = CFUUIDCreateString(kCFAllocatorDefault, uuidRef);
-	[properties setObject:(__bridge NSString *)uuidString forKey:IMHandlePropertyPictureIdentifier];
-	CFRelease(uuidString);
-	CFRelease(uuidRef);
+	[properties setObject:@"console" forKey:IMHandlePropertyPictureIdentifier];
 	[properties setObject:@"Execute Campfire commands here. Use /help for help." forKey:IMHandlePropertyStatusMessage];
 	[properties setObject:@"Console" forKey:IMHandlePropertyAlias];
 	[properties setObject:[NSArray arrayWithObjects:IMHandleCapabilityMessaging, IMHandleCapabilityHandlePicture, nil]
@@ -861,13 +863,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 		[userInfo setObject:user.emailAddress forKey:IMHandlePropertyEmailAddress];
 		[userInfo setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, nil] forKey:IMHandlePropertyCapabilities];
 		if (user.avatarURL) {
-			CFUUIDRef uuidRef = CFUUIDCreate(kCFAllocatorDefault);
-			CFStringRef uuidString = CFUUIDCreateString(kCFAllocatorDefault, uuidRef);
-			
-			[userInfo setObject:(__bridge NSString *)uuidString forKey:IMHandlePropertyPictureIdentifier];
-			CFRelease(uuidString);
-			CFRelease(uuidRef);
-//			[userInfo setObject:user.avatarKey forKey:IMHandlePropertyPictureIdentifier];
+			[userInfo setObject:user.avatarKey forKey:IMHandlePropertyPictureIdentifier];
 		}
 		
 		NSInteger userStatus = IMHandleAvailabilityUnknown;
@@ -892,12 +888,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 		NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
 		[userInfo setObject:@"Console" forKey:IMHandlePropertyAlias];
 		[userInfo setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, IMHandleCapabilityMessaging, nil] forKey:IMHandlePropertyCapabilities];
-		CFUUIDRef uuidRef = CFUUIDCreate(kCFAllocatorDefault);
-		CFStringRef uuidString = CFUUIDCreateString(kCFAllocatorDefault, uuidRef);
-		
-		[userInfo setObject:(__bridge NSString *)uuidString forKey:IMHandlePropertyPictureIdentifier];
-		CFRelease(uuidString);
-		CFRelease(uuidRef);
+		[userInfo setObject:@"console" forKey:IMHandlePropertyPictureIdentifier];
 		
 		[userInfo setObject:[NSNumber numberWithInteger:IMHandleAvailabilityAvailable] forKey:IMHandlePropertyAvailability];
 		
