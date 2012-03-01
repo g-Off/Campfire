@@ -108,7 +108,7 @@
 
 - (NSString *)avatarKey
 {
-	return [NSString stringWithFormat:@"%@_%@",self.userKey, [self.avatarURL absoluteString]];
+	return [NSString stringWithFormat:@"%@-%d",self.userKey, [self.avatarURL hash]];
 }
 
 - (NSUInteger)hash
