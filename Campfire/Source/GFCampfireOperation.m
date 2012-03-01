@@ -14,10 +14,12 @@
                  params:(NSMutableDictionary *)params
              httpMethod:(NSString *)method
 {
-	if (([method isEqualToString:@"POST"] || [method isEqualToString:@"PUT"]) && (params == nil || [params count] == 0)) {
+	if ([method isEqualToString:@"POST"] || [method isEqualToString:@"PUT"]) {
 		self.postDataEncoding = MKNKPostDataEncodingTypeJSON;
 		// stupid workaround for MKNetworkKit not doing PUT/POST operations with no params
-		params = [NSMutableDictionary dictionaryWithObject:@"" forKey:@""];
+		if (params == nil || [params count] == 0) {
+			params = [NSMutableDictionary dictionaryWithObject:@"" forKey:@""];
+		}
 	}
 	self = [super initWithURLString:aURLString params:params httpMethod:method];
 	return self;
