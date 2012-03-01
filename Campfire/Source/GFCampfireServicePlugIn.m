@@ -1049,7 +1049,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	}
 	
 	// XXX: CRLF could be problematic if someone sends/pastes a \r\n in the body or whatnot of their message
-	[socket readDataToData:[GCDAsyncSocket CRLFData] withTimeout:5.0 tag:1];
+	[socket readDataToData:[GCDAsyncSocket CRLFData] withTimeout:10.0 tag:1];
 }
 
 - (NSTimeInterval)socket:(GCDAsyncSocket *)sock shouldTimeoutReadWithTag:(long)tag elapsed:(NSTimeInterval)elapsed bytesDone:(NSUInteger)length
@@ -1065,9 +1065,9 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	if (roomId) {
 		[serviceApplication plugInDidLeaveChatRoom:roomId error:err];
 		
-		if (self.reachable) {
+		if (self.reachable && [[err domain] isEqualToString:GCDAsyncSocketErrorDomain] && [err code] == GCDAsyncSocketReadTimeoutError) {
 			// TODO: test/enable this
-//			[self didJoinRoom:roomId];
+			[self didJoinRoom:roomId];
 		}
 	}
 }
