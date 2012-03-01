@@ -14,8 +14,8 @@
                  params:(NSMutableDictionary *)params
              httpMethod:(NSString *)method
 {
-	self.postDataEncoding = MKNKPostDataEncodingTypeJSON;
 	if (([method isEqualToString:@"POST"] || [method isEqualToString:@"PUT"]) && (params == nil || [params count] == 0)) {
+		self.postDataEncoding = MKNKPostDataEncodingTypeJSON;
 		// stupid workaround for MKNetworkKit not doing PUT/POST operations with no params
 		params = [NSMutableDictionary dictionaryWithObject:@"" forKey:@""];
 	}
