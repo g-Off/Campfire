@@ -18,6 +18,7 @@
 #import "GFCampfireUser.h"
 #import "GFCampfireRoom.h"
 #import "GFCampfireMessage.h"
+#import "GFCampfireUpload.h"
 
 #import "GFCampfireOperation.h"
 
@@ -93,6 +94,8 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	NSMutableDictionary *_chats;
 	
 	NSMutableDictionary *_commands;
+	
+	NSString *_consoleHandle;
 }
 
 @synthesize reachable=_reachable;
@@ -226,15 +229,15 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 																														  forKey:IMAttributeItalic]];
 			IMServicePlugInMessage *message = [IMServicePlugInMessage servicePlugInMessageWithContent:attributedString];
 			if ([_rooms objectForKey:args]) {
-				[serviceApplication plugInDidReceiveMessage:message forChatRoom:args fromHandle:@"console"];
+				[serviceApplication plugInDidReceiveMessage:message forChatRoom:args fromHandle:_consoleHandle];
 			} else {
-				[serviceApplication plugInDidReceiveMessage:message fromHandle:@"console"];	
+				[serviceApplication plugInDidReceiveMessage:message fromHandle:_consoleHandle];	
 			}
 		});
 		
 		GFCampfireAddBlockCommand(_commands, @"list", @"List the available rooms", ^(NSString *args) {
 			IMServicePlugInMessage *message = [self roomList];
-			[serviceApplication plugInDidReceiveMessage:message fromHandle:@"console"];
+			[serviceApplication plugInDidReceiveMessage:message fromHandle:_consoleHandle];
 		});
 		
 		GFCampfireAddBlockCommand(_commands, @"join", @"Joins the specified room(s)", ^(NSString *args) {
@@ -309,7 +312,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 		
 		GFCampfireAddBlockCommand(_commands, @"info", @"Displays information about the plugin", ^(NSString *args) {
 			IMServicePlugInMessage *message = [self infoMessage];
-			[serviceApplication plugInDidReceiveMessage:message fromHandle:@"console"];
+			[serviceApplication plugInDidReceiveMessage:message fromHandle:_consoleHandle];
 		});
 	}
 	
@@ -322,6 +325,8 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	_username = [accountSettings objectForKey:IMAccountSettingLoginHandle];
 	_password = [accountSettings objectForKey:IMAccountSettingPassword];
 	_useSSL = [[accountSettings objectForKey:IMAccountSettingUsesSSL] boolValue];
+	
+	_consoleHandle = [[NSString alloc] initWithFormat:@"+console@%@", [_server lowercaseString]];
 	
 	_networkEngine = [[MKNetworkEngine alloc] initWithHostName:_server customHeaderFields:nil];
 	[_networkEngine performSelector:@selector(setCustomOperationSubclass:) withObject:[GFCampfireOperation class]];
@@ -524,7 +529,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 		} else {
 			[self userAvatarUpdated:user withIdentifier:identifier];
 		}
-	} else if ([handle isEqualToString:@"console"]) {
+	} else if ([handle isEqualToString:_consoleHandle]) {
 		NSBundle *bundle = [NSBundle bundleForClass:[self class]];
 		NSURL *url = [bundle URLForImageResource:@"Campfire"];
 		NSData *data = [NSData dataWithContentsOfURL:url];
@@ -552,30 +557,61 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 #pragma mark -
 #pragma mark IMServicePlugInGroupListSupport
 
-- (void)sendGroupListUpdate
+- (oneway void)requestGroupList
 {
 	NSMutableDictionary *campfireGroup = [NSMutableDictionary dictionary];
 	[campfireGroup setObject:@"Campfire" forKey:IMGroupListNameKey];
-//	[campfireGroup setObject:[NSArray array] forKey:IMGroupListPermissionsKey];
-	NSMutableArray *handles = [NSMutableArray arrayWithObject:@"console"];
-//	[handles addObjectsFromArray:_users.allKeys];
+	NSMutableArray *handles = [NSMutableArray arrayWithObject:_consoleHandle];
+	//	[handles addObjectsFromArray:_users.allKeys];
 	[campfireGroup setObject:handles forKey:IMGroupListHandlesKey];
 	[serviceApplication plugInDidUpdateGroupList:[NSArray arrayWithObject:campfireGroup] error:nil];
+	
+	[serviceApplication plugInDidUpdateProperties:[self propertiesOfHandle:_consoleHandle] ofHandle:_consoleHandle];
 }
 
-- (oneway void)requestGroupList
+- (NSDictionary *)propertiesOfHandle:(NSString *)handle
 {
-	[self sendGroupListUpdate];
-	
 	NSMutableDictionary *properties = [NSMutableDictionary dictionary];
-	[properties setObject:[NSNumber numberWithInteger:IMHandleAvailabilityAvailable] forKey:IMHandlePropertyAvailability];
-	[properties setObject:@"console" forKey:IMHandlePropertyPictureIdentifier];
-	[properties setObject:@"Execute Campfire commands here. Use /help for help." forKey:IMHandlePropertyStatusMessage];
-	[properties setObject:@"Console" forKey:IMHandlePropertyAlias];
-	[properties setObject:[NSArray arrayWithObjects:IMHandleCapabilityMessaging, IMHandleCapabilityHandlePicture, nil]
-				   forKey:IMHandlePropertyCapabilities];
 	
-	[serviceApplication plugInDidUpdateProperties:properties ofHandle:@"console"];
+	if ([handle isEqualToString:_consoleHandle]) {
+		[properties setObject:@"Console" forKey:IMHandlePropertyAlias];
+		[properties setObject:[NSArray arrayWithObjects:IMHandleCapabilityMessaging, IMHandleCapabilityHandlePicture, nil]
+					   forKey:IMHandlePropertyCapabilities];
+		[properties setObject:_consoleHandle forKey:IMHandlePropertyPictureIdentifier];
+		[properties setObject:[NSNumber numberWithInteger:IMHandleAvailabilityAvailable] forKey:IMHandlePropertyAvailability];
+		[properties setObject:@"Execute Campfire commands here. Use /help for help." forKey:IMHandlePropertyStatusMessage];
+	} else {
+		GFCampfireUser *user = [_users objectForKey:handle];
+		
+		[properties setObject:user.name forKey:IMHandlePropertyAlias];
+		[properties setObject:user.emailAddress forKey:IMHandlePropertyEmailAddress];
+		[properties setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, nil] forKey:IMHandlePropertyCapabilities];
+		if (user.avatarURL) {
+			[properties setObject:user.avatarKey forKey:IMHandlePropertyPictureIdentifier];
+		}
+		
+		NSMutableString *statusMessage = [NSMutableString string];
+		if ([user isAdmin]) {
+			[statusMessage appendString:@"Admin/"];
+		}
+		if (user.type == GFCampfireUserTypeGuest) {
+			[statusMessage appendString:@"Guest"];
+		} else if (user.type == GFCampfireUserTypeMember) {
+			[statusMessage appendString:@"Member"];
+		}
+		[properties setObject:statusMessage forKey:IMHandlePropertyStatusMessage];
+		
+		NSInteger userStatus = IMHandleAvailabilityUnknown;
+		for (GFCampfireRoom *room in _rooms.objectEnumerator) {
+			if ([room.users indexOfObject:user] != NSNotFound) {
+				userStatus = IMHandleAvailabilityAvailable;
+				break;
+			}
+		}
+		[properties setObject:[NSNumber numberWithInteger:userStatus] forKey:IMHandlePropertyAvailability];
+	}
+	
+	return [properties copy];
 }
 
 #pragma mark -
@@ -588,17 +624,12 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 #pragma mark -
 #pragma mark IMServicePlugInInstantMessagingSupport
 
-- (oneway void)userDidStartTypingToHandle:(NSString *)handle
-{
-}
-
-- (oneway void)userDidStopTypingToHandle:(NSString *)handle
-{
-}
+- (oneway void)userDidStartTypingToHandle:(NSString *)handle {}
+- (oneway void)userDidStopTypingToHandle:(NSString *)handle {}
 
 - (oneway void)sendMessage:(IMServicePlugInMessage *)message toHandle:(NSString *)handle
 {
-	if ([handle isEqualToString:@"console"]) {
+	if ([handle isEqualToString:_consoleHandle]) {
 		NSString *messageString = message.content.string;
 		
 		GFCampfireCommand *command = [self commandForMessage:messageString];
@@ -622,6 +653,29 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 
 #pragma mark -
 #pragma mark Helper Methods
+
+- (void)getUploadFromMessage:(GFCampfireMessage *)message
+{
+	NSAssert(message.type == GFCampfireMessageTypeUpload, @"Message Type must be an Upload");
+	
+	NSInteger roomId = message.roomId;
+	NSInteger messageId = message.messageId;
+	
+//	room/474752/messages/513233673/upload.json
+	
+	if (_me && _me.apiAuthToken) {
+		NSString *path = [NSString stringWithFormat:@"room/%ld/messages/%ld/upload.json", roomId, messageId];
+		MKNetworkOperation *operation = [_networkEngine operationWithPath:path params:nil httpMethod:@"GET" ssl:_useSSL];
+		[operation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
+		[operation onCompletion:^(MKNetworkOperation *completedOperation) {
+			id json = [completedOperation responseJSON];
+			GFCampfireUpload *upload = [GFJSONObject objectWithDictionary:json];
+		} onError:^(NSError *error) {
+			
+		}];
+		[_networkEngine enqueueOperation:operation];
+	}
+}
 
 - (void)getAllRooms
 {
@@ -665,7 +719,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 //				[self updateInformationForRoom:room didJoin:YES];
 				NSAttributedString *inviteMessage = [[NSAttributedString alloc] initWithString:[NSString stringWithFormat:@"Join %@?", room.name]];
 				IMServicePlugInMessage *message = [IMServicePlugInMessage servicePlugInMessageWithContent:inviteMessage];
-				[serviceApplication plugInDidReceiveInvitation:message forChatRoom:room.roomKey fromHandle:nil/*@"console"*/];
+				[serviceApplication plugInDidReceiveInvitation:message forChatRoom:room.roomKey fromHandle:nil/*_consoleHandle*/];
 			}
 		} onError:^(NSError *error) {
 			DDLogError(@"Error fetching users active rooms, %@", error);
@@ -777,12 +831,32 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 						[serviceApplication plugInDidReceiveMessage:pluginMessage forChatRoom:roomId fromHandle:userId];
 					}
 				}
+			} else if (message.type == GFCampfireMessageTypeUpload) {
+
+				[self processUploadMessage:message];
 			}
 		}
 		
 		[[NSUserDefaults standardUserDefaults] setObject:message.messageKey forKey:[NSString stringWithFormat:@"Campfire-%@", roomId]];
 		[[NSUserDefaults standardUserDefaults] synchronize];
 	}
+}
+
+- (void)processUploadMessage:(GFCampfireMessage *)message
+{
+//	NSCachesDirectory
+	
+	NSString *path = [NSString stringWithFormat:@"room/%d/messages/%d/upload.json", message.roomId, message.messageId];
+	MKNetworkOperation *uploadMessageOperation = [_networkEngine operationWithPath:path params:nil httpMethod:@"GET" ssl:YES];
+	[uploadMessageOperation setUsername:_me.apiAuthToken password:@"X" basicAuth:YES];
+	[uploadMessageOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+		
+	} onError:^(NSError *error) {
+		
+	}];
+//	NSURL *fileURL = [NSURL fileURLWithPath:<#(NSString *)#>];
+//	NSOutputStream *fileOutputStream = [NSOutputStream outputStreamWithURL:fileURL append:<#(BOOL)#>];
+//	[uploadMessageOperation addDownloadStream:fileOutputStream];
 }
 
 - (void)updateInformationForRoom:(GFCampfireRoom *)room didJoin:(BOOL)didJoin
@@ -831,9 +905,9 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 		for (GFCampfireUser *user in [joinedUsers setByAddingObjectsFromSet:departedUsers]) {
 			[self updateInformationForUser:user];
 		}
-		
-		[self updateAllUsersInformation];
 	}
+	
+	[self updateAllUsersInformation];
 }
 
 - (void)updateAllUsersInformation
@@ -859,21 +933,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	
 //	if (triggersUpdate) {
 		NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
-		[userInfo setObject:user.name forKey:IMHandlePropertyAlias];
-		[userInfo setObject:user.emailAddress forKey:IMHandlePropertyEmailAddress];
-		[userInfo setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, nil] forKey:IMHandlePropertyCapabilities];
-		if (user.avatarURL) {
-			[userInfo setObject:user.avatarKey forKey:IMHandlePropertyPictureIdentifier];
-		}
-		
-		NSInteger userStatus = IMHandleAvailabilityUnknown;
-		for (GFCampfireRoom *room in _rooms.objectEnumerator) {
-			if ([room.users indexOfObject:user] != NSNotFound) {
-				userStatus = IMHandleAvailabilityAvailable;
-				break;
-			}
-		}
-		[userInfo setObject:[NSNumber numberWithInteger:userStatus] forKey:IMHandlePropertyAvailability];
+		// geofftrace
 		
 		[serviceApplication plugInDidUpdateProperties:userInfo ofHandle:user.userKey];
 //	}
@@ -884,15 +944,8 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	GFCampfireUser *user = [_users objectForKey:userKey];
 	if (user) {
 		[self updateInformationForUser:user];
-	} else if ([userKey isEqualToString:@"console"]) {
-		NSMutableDictionary *userInfo = [NSMutableDictionary dictionary];
-		[userInfo setObject:@"Console" forKey:IMHandlePropertyAlias];
-		[userInfo setObject:[NSArray arrayWithObjects:IMHandleCapabilityHandlePicture, IMHandleCapabilityMessaging, nil] forKey:IMHandlePropertyCapabilities];
-		[userInfo setObject:@"console" forKey:IMHandlePropertyPictureIdentifier];
-		
-		[userInfo setObject:[NSNumber numberWithInteger:IMHandleAvailabilityAvailable] forKey:IMHandlePropertyAvailability];
-		
-		[serviceApplication plugInDidUpdateProperties:userInfo ofHandle:user.userKey];
+	} else if ([userKey isEqualToString:_consoleHandle]) {
+		[serviceApplication plugInDidUpdateProperties:[self propertiesOfHandle:_consoleHandle] ofHandle:_consoleHandle];
 	}
 }
 
@@ -1060,13 +1113,15 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 
 - (void)socketDidDisconnect:(__unsafe_unretained GCDAsyncSocket *)sock withError:(__unsafe_unretained NSError *)err
 {
+//	kCFStreamErrorDomainSSL, errSSLClosedGraceful
 	NSString *roomId = [self roomIdForSocket:sock]; //error code = 4, domain = GCDAsyncSocketErrorDomain == timeout
 	DDLogWarn(@"Socket for room %@ disconnected with error: %@", roomId, err);
 	if (roomId) {
 		[serviceApplication plugInDidLeaveChatRoom:roomId error:err];
 		
 		if (self.reachable && [[err domain] isEqualToString:GCDAsyncSocketErrorDomain] && [err code] == GCDAsyncSocketReadTimeoutError) {
-			// TODO: test/enable this
+			// XXX: don't need to do a leave chatroom, just need to re-establish stream connection
+			// and then check for users that left/joined
 			[self didJoinRoom:roomId];
 		}
 	}
@@ -1076,6 +1131,32 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 {
 	NSString *roomId = [[_chats allKeysForObject:socket] lastObject];
 	return roomId;
+}
+
+- (NSURL *)cachePathForRoom:(NSString *)roomId
+{
+//	NSCachesDirectory
+//	[NSURL FileURLWithPath
+	
+	NSString *appName = [[NSBundle bundleForClass:[self class]] bundleIdentifier];
+	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+	NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : NSTemporaryDirectory();
+	NSString *cacheDirectory = [basePath stringByAppendingPathComponent:appName];
+	
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	BOOL isDir = NO;
+	BOOL fileExists = [fileManager fileExistsAtPath:cacheDirectory isDirectory:&isDir];
+	
+	NSURL *cacheDir = [NSURL fileURLWithPath:cacheDirectory isDirectory:YES];
+	if (fileExists && isDir) {
+		
+	} else {
+		NSError *error = nil;
+		BOOL created = [fileManager createDirectoryAtURL:cacheDir withIntermediateDirectories:YES attributes:nil error:&error];
+		if (created) {
+			
+		}
+	}
 }
 
 @end
