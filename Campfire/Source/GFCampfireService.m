@@ -10,6 +10,9 @@
 
 #import <MKNetworkKit/MKNetworkKit.h>
 
+#import "GCDAsyncSocket.h"
+
+#import "GFCampfireRoom.h"
 #import "GFCampfireUser.h"
 
 @implementation GFCampfireService
@@ -70,7 +73,52 @@
 
 - (void)logout
 {
+	for (GCDAsyncSocket *socket in _chats.objectEnumerator) {
+		[socket disconnect];
+	}
+	[_chats removeAllObjects];
+	_me = nil;
 	
+	[_delegate serviceDidLogout:self];
+}
+
+- (void)joinRoom:(NSString *)roomId
+{
+	if (_me && _me.apiAuthToken) { 
+		if ([_activeRooms objectForKey:roomId] == nil) {
+			MKNetworkOperation *joinRoomOperation = [_networkEngine operationWithPath:[NSString stringWithFormat:@"room/%@/join.json", roomId] params:nil httpMethod:@"POST" ssl:_useSSL];
+			[joinRoomOperation setUsername:_me.apiAuthToken	password:@"X" basicAuth:YES];
+			[joinRoomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+				[self didJoinRoom:roomId];
+			} onError:^(NSError *error) {
+				if ([_activeRooms objectForKey:roomId] == nil) {
+//					[serviceApplication plugInDidLeaveChatRoom:roomId error:error];
+				} else {
+					[self didJoinRoom:roomId];
+				}
+			}];
+			[_networkEngine enqueueOperation:joinRoomOperation forceReload:YES];
+		} else {
+			[self didJoinRoom:roomId];
+		}
+	}
+}
+
+- (void)didJoinRoom:(NSString *)roomId
+{
+	GFCampfireRoom *room = [_rooms objectForKey:roomId];
+	if (room) {
+		[_activeRooms setObject:room forKey:room.roomKey];
+		
+//		[self startStreamingRoom:roomId];
+//		
+//		[self getRoom:roomId didJoin:YES];
+//		NSString *lastMessageKey = [[NSUserDefaults standardUserDefaults] objectForKey:[NSString stringWithFormat:@"Campfire-%@", roomId]];
+//		[self getRecentMessagesForRoom:roomId sinceMessage:lastMessageKey];
+//		
+//		[serviceApplication plugInDidJoinChatRoom:roomId];
+//		[serviceApplication plugInDidReceiveNotice:room.topic forChatRoom:roomId];
+	}
 }
 
 @end

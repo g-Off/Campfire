@@ -37,6 +37,8 @@
 - (void)login;
 - (void)logout;
 
+- (void)joinRoom:(NSString *)roomId;
+
 @end
 
 @protocol GFCampfireServiceDelegate <NSObject>
@@ -45,5 +47,8 @@
 - (void)serviceDidLogin:(GFCampfireService *)service;
 - (void)serviceDidFailLogin:(GFCampfireService *)service error:(NSError *)error;
 - (void)serviceDidLogout:(GFCampfireService *)service;
+
+- (void)service:(GFCampfireService *)service didJoinRoom:(NSString *)roomId;
+- (void)service:(GFCampfireService *)service didLeaveRoom:(NSString *)roomId error:(NSError *)error;
 
 @end
