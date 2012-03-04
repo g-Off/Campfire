@@ -55,18 +55,15 @@
  }
  */
 
-- (id)JSONRepresentation
+- (void)updateWithDictionary:(NSDictionary *)dict
 {
-	NSMutableDictionary *dict;
-	[[[self class] jsonMapping] enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
-		NSString *propertyName = key;
-		NSString *jsonKey = obj;
-		
-		
-		id theObj = [self valueForKey:propertyName];
-		
-		[dict setObject:theObj forKey:jsonKey];
-	}];
+	[super updateWithDictionary:dict];
+	NSString *userType = [dict objectForKey:@"type"];
+	if ([userType isEqualToString:@"Member"]) {
+		self.type = GFCampfireUserTypeMember;
+	} else {
+		self.type = GFCampfireUserTypeGuest;
+	}
 }
 
 - (void)updateWithObject:(GFCampfireUser *)obj
@@ -108,7 +105,7 @@
 
 - (NSString *)avatarKey
 {
-	return [NSString stringWithFormat:@"%@-%d",self.userKey, [self.avatarURL hash]];
+	return [NSString stringWithFormat:@"%@%ld",self.userKey, [self.avatarURL hash]];
 }
 
 - (NSUInteger)hash
