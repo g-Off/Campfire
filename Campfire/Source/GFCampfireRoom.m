@@ -38,14 +38,23 @@
  }
  */
 
++ (NSDictionary *)jsonMapping
+{
+	return [NSDictionary dictionaryWithObjectsAndKeys:
+			@"id", @"roomId",
+			@"locked", @"locked",
+			@"membership_limit", @"membershipLimit",
+			@"name", @"name",
+			@"topic", @"topic",
+			@"updated_at", @"updatedAt",
+			@"created_at", @"createdAt",
+			@"open_to_guests", @"openToGuests",
+			nil];
+}
+
 - (void)updateWithDictionary:(NSDictionary *)dict
 {
-	self.roomId = [(NSNumber *)[dict objectForKey:@"id"] integerValue];
-	self.name = [dict objectForKey:@"name"];
-	self.topic = [dict objectForKey:@"topic"];
-	self.membershipLimit = [(NSNumber *)[dict objectForKey:@"membership_limit"] integerValue];
-//	self.full;
-	self.openToGuests = [(NSNumber *)[dict objectForKey:@"open_to_guests"] boolValue];
+	[super updateWithDictionary:dict];
 //	self.activeTokenValue;
 //	self.updatedAt;
 //	self.createdAt;
@@ -54,7 +63,6 @@
 		NSDictionary *usersDict = [NSDictionary dictionaryWithObject:usersArray forKey:@"users"];
 		self.users = [GFJSONObject objectWithDictionary:usersDict];
 	}
-	self.locked = [(NSNumber *)[dict objectForKey:@"locked"] boolValue];
 }
 
 - (void)updateWithObject:(GFJSONObject *)obj
