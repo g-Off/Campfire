@@ -38,8 +38,6 @@
 @synthesize userId;
 @synthesize apiAuthToken;
 
-@synthesize avatarData;
-
 /*
  {
 	 "user": {
