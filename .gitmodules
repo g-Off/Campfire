@@ -7,3 +7,6 @@
 [submodule "AFNetworking"]
 	path = AFNetworking
 	url = git://github.com/AFNetworking/AFNetworking.git
+[submodule "NSLogger"]
+	path = NSLogger
+	url = git://github.com/fpillet/NSLogger.git
