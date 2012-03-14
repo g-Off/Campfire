@@ -46,6 +46,7 @@ static NSString *kGFCampfireLogDomainAvatar		= @"avatar";
 static NSString *kGFCampfireLogDomainUser		= @"user";
 static NSString *kGFCampfireLogDomainChat		= @"chat";
 static NSString *kGFCampfireLogDomainConsole	= @"console";
+static NSString *kGFCampfireLogDomainNetwork	= @"network";
 
 enum {
 	GFCampfireErrorConsoleInvalidCommand,
@@ -81,7 +82,7 @@ static inline void GFCampfireAddBlockCommand(NSMutableDictionary *dict, NSString
 	GFCampfireUser *_me;
 	
 	NSMutableDictionary *_rooms;
-	NSMutableDictionary *_activeRooms;
+	NSMutableSet *_activeRooms;
 	NSMutableDictionary *_users;
 	NSMutableDictionary *_chatStreams;
 	NSMutableDictionary *_commands;
@@ -118,7 +119,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		serviceApplication = aServiceApplication;
 		
 		_rooms = [[NSMutableDictionary alloc] init];
-		_activeRooms = [[NSMutableDictionary alloc] init];
+		_activeRooms = [[NSMutableSet alloc] init];
 		_users = [[NSMutableDictionary alloc] init];
 		_chatStreams = [[NSMutableDictionary alloc] init];
 		
@@ -176,7 +177,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 			[serviceApplication plugInDidLogOutWithError:error reconnect:YES];
 		}
 	}];
-	[_networkEngine enqueueOperation:loginOperation forceReload:YES];
+	[self enqueueOperation:loginOperation forceReload:YES];
 }
 
 - (oneway void)logout
@@ -204,23 +205,34 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	return operation;
 }
 
+- (void)enqueueOperation:(MKNetworkOperation *)operation
+{
+	[self enqueueOperation:operation forceReload:NO];
+}
+
+- (void)enqueueOperation:(MKNetworkOperation *)operation forceReload:(BOOL)forceReload
+{
+	LOG_MESSAGE(GFCampfireLogLevelDebug, kGFCampfireLogDomainNetwork, @"Performing request: %@", [operation curlCommandLineString]);
+	[_networkEngine enqueueOperation:operation forceReload:forceReload];
+}
+
 #pragma mark -
 #pragma mark IMServicePlugInChatRoomSupport
 
 - (oneway void)joinChatRoom:(NSString *)roomId
 {
-	if ([_activeRooms objectForKey:roomId] == nil) {
+	if ([_activeRooms containsObject:roomId] == NO) {
 		MKNetworkOperation *joinRoomOperation = [self operationWithPath:[NSString stringWithFormat:@"room/%@/join.json", roomId] params:nil httpMethod:@"POST"];
 		[joinRoomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 			[self didJoinRoom:roomId];
 		} onError:^(NSError *error) {
-			if ([_activeRooms objectForKey:roomId] == nil) {
-				[serviceApplication plugInDidLeaveChatRoom:roomId error:error];
-			} else {
+			if ([_activeRooms containsObject:roomId]) {
 				[self didJoinRoom:roomId];
+			} else {
+				[serviceApplication plugInDidLeaveChatRoom:roomId error:error];
 			}
 		}];
-		[_networkEngine enqueueOperation:joinRoomOperation forceReload:YES];
+		[self enqueueOperation:joinRoomOperation forceReload:YES];
 	} else {
 		[self didJoinRoom:roomId];
 	}
@@ -228,7 +240,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 
 - (oneway void)leaveChatRoom:(NSString *)roomId
 {
-	static BOOL shouldLeaveRemote = NO;
+	static BOOL shouldLeaveRemote = YES;
 	if (shouldLeaveRemote) {
 		// Only do a remote leave if user is configured to do so
 		// TODO: find a way to make this a preference
@@ -243,14 +255,14 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	[leaveRoomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 	} onError:^(NSError *error) {
 	}];
-	[_networkEngine enqueueOperation:leaveRoomOperation forceReload:YES];
+	[self enqueueOperation:leaveRoomOperation forceReload:YES];
 }
 
 - (void)didLeaveRoom:(NSString *)roomId
 {
 	[self stopStreamingRoom:roomId];
 	[serviceApplication plugInDidLeaveChatRoom:roomId error:nil];
-	[_activeRooms removeObjectForKey:roomId];
+	[_activeRooms removeObject:roomId];
 }
 
 - (oneway void)inviteHandles:(NSArray *)handles toChatRoom:(NSString *)roomName withMessage:(IMServicePlugInMessage *)message
@@ -279,7 +291,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		} onError:^(NSError *error) {
 			[serviceApplication plugInDidSendMessage:message toChatRoom:roomId error:error];
 		}];
-		[_networkEngine enqueueOperation:sendMessageOperation forceReload:YES];
+		[self enqueueOperation:sendMessageOperation forceReload:YES];
 	}
 }
 
@@ -372,6 +384,22 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	[serviceApplication plugInDidUpdateProperties:handleProperties ofHandle:_consoleHandle];
 }
 
+- (NSArray *)userList
+{
+	NSMutableArray *userList = [NSMutableArray arrayWithObject:_consoleHandle];
+	[userList addObjectsFromArray:[_users allKeys]];
+	[userList removeObject:_me.userKey];
+	return [userList copy];
+}
+
+- (void)sendPropertiesOfHandles:(NSArray *)handles
+{
+	[handles enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
+		NSDictionary *handleProperties = [self propertiesOfHandle:obj];
+		[serviceApplication plugInDidUpdateProperties:handleProperties ofHandle:obj];
+	}];
+}
+
 - (NSDictionary *)propertiesOfHandle:(NSString *)handle
 {
 	NSMutableDictionary *properties = [NSMutableDictionary dictionary];
@@ -457,6 +485,23 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 #pragma mark -
 #pragma mark Helper Methods
 
+- (BOOL)userIsOnline:(NSString *)userId
+{
+	BOOL online = NO;
+	for (GFCampfireRoom *room in _rooms.objectEnumerator) {
+		NSUInteger userIndex = [room.users indexOfObjectPassingTest:^BOOL(id obj, NSUInteger idx, BOOL *stop) {
+			GFCampfireUser *user = obj;
+			return [user.key isEqualToString:userId];
+		}];
+		if (userIndex != NSNotFound) {
+			online = YES;
+			break;
+		}
+	}
+	
+	return online;
+}
+
 - (void)getUploadFromMessage:(GFCampfireMessage *)message
 {
 	NSAssert(message.type == GFCampfireMessageTypeUpload, @"Message Type must be an Upload");
@@ -472,7 +517,57 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	} onError:^(NSError *error) {
 		
 	}];
-	[_networkEngine enqueueOperation:operation];
+	[self enqueueOperation:operation];
+}
+
+- (void)addRoom:(GFCampfireRoom *)room
+{
+	NSMutableArray *joinedUsers = [NSMutableArray array];
+	NSMutableArray *departedUsers = [NSMutableArray array];
+	NSMutableArray *newUsers = [NSMutableArray array];
+	
+	// first sub any existing users into the given rooms list of users
+	NSMutableArray *users = [NSMutableArray arrayWithCapacity:[room.users count]];
+	for (GFCampfireUser *user in room.users) {
+		GFCampfireUser *existingUser = [_users objectForKey:user.userKey];
+		if (existingUser) {
+			[users addObject:existingUser];
+		} else {
+			[users addObject:user];
+			[newUsers addObject:user];
+//			[self addUser:user]; // TODO: do this instead of below
+			[_users setObject:user forKey:user.userKey];
+		}
+	}
+	
+	room.users = [users copy];
+	
+	GFCampfireRoom *existingRoom = [_rooms objectForKey:room.roomKey];
+	if (existingRoom) {
+		NSMutableSet *existingUserIds = [existingRoom.users valueForKey:@"userKey"];
+		NSMutableSet *roomUserIds = [room.users valueForKey:@"userKey"];
+		
+		for (GFCampfireUser *user in existingRoom.users) {
+			if ([room.users containsObject:user] == NO) {
+				[departedUsers addObject:user];
+			}
+		}
+		[existingRoom updateWithRoom:room];
+	} else {
+		[_rooms setObject:room forKey:room.roomKey];
+	}
+	
+//	[serviceApplication plugInDidUpdateGroupList:<#(NSArray *)#> error:<#(NSError *)#>];
+	
+	if ([joinedUsers count] > 0) {
+		NSArray *joinedHandles = [[joinedUsers valueForKey:@"userKey"] allObjects];
+		[serviceApplication handles:joinedHandles didJoinChatRoom:room.roomKey];
+	}
+	
+	if ([departedUsers count] > 0) {
+		NSArray *departedHandles = [[departedUsers valueForKey:@"userKey"] allObjects];
+		[serviceApplication handles:departedHandles didLeaveChatRoom:room.roomKey];
+	}
 }
 
 - (void)getAllRooms
@@ -483,21 +578,15 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		NSArray *allRooms = [GFJSONObject objectWithDictionary:json];
 		
 		for (GFCampfireRoom *room in allRooms) {
-			for (GFCampfireUser *user in room.users) {
-				[self updateInformationForUser:user];
-			}
-			GFCampfireRoom *existingRoom = [_rooms objectForKey:room.roomKey];
-			if (existingRoom) {
-				// update existing room
-				[existingRoom updateWithRoom:room];
-			} else {
-				[_rooms setObject:room forKey:room.roomKey];
-			}
+//			for (GFCampfireUser *user in room.users) {
+//				[self updateInformationForUser:user];
+//			}
+			[self addRoom:room];
 		}
 	} onError:^(NSError *error) {
 		DDLogError(@"Error fetching rooms, %@", error);
 	}];
-	[_networkEngine enqueueOperation:roomListOperation forceReload:YES];
+	[self enqueueOperation:roomListOperation forceReload:YES];
 }
 
 - (void)getUserRooms
@@ -508,16 +597,17 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		NSArray *usersRooms = [GFJSONObject objectWithDictionary:json];
 		
 		for (GFCampfireRoom *room in usersRooms) {
-			//				[_activeRooms setObject:room forKey:room.roomKey];
-			//				[self updateInformationForRoom:room didJoin:YES];
-			NSAttributedString *inviteMessage = [[NSAttributedString alloc] initWithString:[NSString stringWithFormat:@"Join %@?", room.name]];
-			IMServicePlugInMessage *message = [IMServicePlugInMessage servicePlugInMessageWithContent:inviteMessage];
-			[serviceApplication plugInDidReceiveInvitation:message forChatRoom:room.roomKey fromHandle:nil/*_consoleHandle*/];
+			[self addRoom:room];
+//			[_activeRooms setObject:room forKey:room.roomKey];
+//			[self updateInformationForRoom:room didJoin:YES];
+//			NSAttributedString *inviteMessage = [[NSAttributedString alloc] initWithString:[NSString stringWithFormat:@"Join %@?", room.name]];
+//			IMServicePlugInMessage *message = [IMServicePlugInMessage servicePlugInMessageWithContent:inviteMessage];
+//			[serviceApplication plugInDidReceiveInvitation:message forChatRoom:room.roomKey fromHandle:nil/*_consoleHandle*/];
 		}
 	} onError:^(NSError *error) {
 		DDLogError(@"Error fetching users active rooms, %@", error);
 	}];
-	[_networkEngine enqueueOperation:usersRooms forceReload:YES];
+	[self enqueueOperation:usersRooms forceReload:YES];
 }
 
 - (void)getRoom:(NSString *)roomId didJoin:(BOOL)didJoin
@@ -530,7 +620,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	} onError:^(NSError *error) {
 		DDLogError(@"Error fetching room %@, %@", roomId, error);
 	}];
-	[_networkEngine enqueueOperation:roomOperation forceReload:YES];
+	[self enqueueOperation:roomOperation forceReload:YES];
 }
 
 - (void)getRoomWithId:(NSString *)roomId
@@ -542,16 +632,18 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	} onError:^(NSError *error) {
 		DDLogError(@"Error fetching room %@, %@", roomId, error);
 	}];
-	[_networkEngine enqueueOperation:roomOperation forceReload:YES];
+	[self enqueueOperation:roomOperation forceReload:YES];
 }
 
 - (void)didJoinRoom:(NSString *)roomId
 {
 	GFCampfireRoom *room = [_rooms objectForKey:roomId];
 	if (room) {
-		[_activeRooms setObject:room forKey:room.roomKey];
+		[_activeRooms addObject:room.roomKey];
 		
-		[self startStreamingRoom:roomId];
+		if ([_chatStreams objectForKey:roomId] == nil) {
+			[self startStreamingRoom:roomId];
+		}
 		
 		[self getRoom:roomId didJoin:YES];
 		
@@ -561,6 +653,17 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		[serviceApplication plugInDidJoinChatRoom:roomId];
 		[serviceApplication plugInDidReceiveNotice:room.topic forChatRoom:roomId];
 	}
+}
+
+
+- (void)user:(NSString *)userId didJoinRoom:(NSString *)roomId
+{
+	
+}
+
+- (void)user:(NSString *)userId didLeaveRoom:(NSString *)roomId
+{
+	
 }
 
 - (void)getRecentMessagesForRoom:(NSString *)roomId sinceMessage:(NSString *)messageId
@@ -578,7 +681,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		// couldn't fetch recents, do I care?
 		DDLogError(@"Error fetching recent messages for room %@ starting with message %@, %@", roomId, messageId, error);
 	}];
-	[_networkEngine enqueueOperation:recentMessagesOperation forceReload:YES];
+	[self enqueueOperation:recentMessagesOperation forceReload:YES];
 }
 
 - (void)processHistoryMessages:(NSArray *)messages
@@ -711,6 +814,68 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	[self updateAllUsersInformation];
 }
 
+- (void)setRoom:(NSString *)roomId topic:(NSString *)topic
+{
+	NSDictionary *params = [NSDictionary dictionaryWithObject:topic forKey:@"topic"];
+	[self updateRoomWithId:roomId attributes:params];
+}
+
+- (void)setRoom:(NSString *)roomId name:(NSString *)name
+{
+	NSDictionary *params = [NSDictionary dictionaryWithObject:name forKey:@"name"];
+	[self updateRoomWithId:roomId attributes:params];
+}
+
+- (void)updateRoomWithId:(NSString *)roomId attributes:(NSDictionary *)attributes
+{
+	NSMutableDictionary *params = [NSMutableDictionary dictionaryWithDictionary:attributes];
+	MKNetworkOperation *changeTopicOperation = [self operationWithPath:[NSString stringWithFormat:@"room/%@.json", roomId] params:params httpMethod:@"PUT"];
+	[changeTopicOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+		GFCampfireRoom *room = [_rooms objectForKey:roomId];
+		NSString *topic = [params objectForKey:@"topic"];
+		NSString *name = [params objectForKey:@"name"];
+		if (topic) {
+			room.topic = topic;
+			[serviceApplication plugInDidReceiveNotice:topic forChatRoom:roomId];
+		}
+		if (name) {
+			room.name = name;
+		}
+	} onError:^(NSError *error) {
+		
+	}];
+}
+
+- (void)lockRoom:(NSString *)roomId
+{
+	GFCampfireRoom *room = [_rooms objectForKey:roomId];
+	if (room && room.locked == NO) {
+		MKNetworkOperation *lockOperation = [self operationWithPath:[NSString stringWithFormat:@"room/%@/lock.json", roomId]
+															 params:nil
+														 httpMethod:@"POST"];
+		[lockOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+			room.locked = YES;
+		} onError:^(NSError *error) {
+			
+		}];
+	}
+}
+
+- (void)unlockRoom:(NSString *)roomId
+{
+	GFCampfireRoom *room = [_rooms objectForKey:roomId];
+	if (room && room.locked == YES) {
+		MKNetworkOperation *unlockOperation = [self operationWithPath:[NSString stringWithFormat:@"room/%@/unlock.json", roomId]
+															   params:nil
+														   httpMethod:@"POST"];
+		[unlockOperation onCompletion:^(MKNetworkOperation *completedOperation) {
+			room.locked = NO;
+		} onError:^(NSError *error) {
+			
+		}];
+	}
+}
+
 - (void)updateAllUsersInformation
 {
 	for (GFCampfireUser *user in _users.objectEnumerator) {
@@ -760,7 +925,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 			// couldn't fetch user, do I care?
 			DDLogError(@"Error fetching info for user %@, %@", userId, error);
 		}];
-		[_networkEngine enqueueOperation:getUserOperation forceReload:YES];
+		[self enqueueOperation:getUserOperation forceReload:YES];
 	} else {
 		[self updateInformationForUserId:userId];
 	}
@@ -795,8 +960,9 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 {
 	GCDAsyncSocket *asyncSocket = [_chatStreams objectForKey:roomId];
 	if (asyncSocket) {
-		[asyncSocket disconnectAfterReadingAndWriting];
+		[asyncSocket disconnect];
 	}
+	[_chatStreams removeObjectForKey:roomId];
 }
 
 #pragma mark -
@@ -849,6 +1015,8 @@ enum {
 			// TODO: this is where I should fetch all history messages
 			[self readNextMessageFromStreamingSocket:socket];
 		}
+		// XXX: what to do if failure here?
+		// saw a 401 Unauthorized in logs
 	}
 }
 
@@ -947,7 +1115,11 @@ enum {
 			if ([[err domain] isEqualToString:GCDAsyncSocketErrorDomain] && [err code] == GCDAsyncSocketReadTimeoutError) {
 				[self startStreamingRoom:roomId];
 				reconnecting = YES;
-			} else if ([[err domain] isEqualToString:@"kCFStreamErrorDomainSSL"] && [err code] == 	errSSLClosedGraceful) {
+			} else if ([[err domain] isEqualToString:@"kCFStreamErrorDomainSSL"] && [err code] == errSSLClosedGraceful) {
+				[self startStreamingRoom:roomId];
+				reconnecting = YES;
+			} else if ([[err domain] isEqualToString:NSPOSIXErrorDomain] && [err code] == ETIMEDOUT) {
+				// Operation Timed Out
 				[self startStreamingRoom:roomId];
 				reconnecting = YES;
 			}
@@ -1143,68 +1315,21 @@ enum {
 		IMServicePlugInMessage *message = [self infoMessage];
 		[serviceApplication plugInDidReceiveMessage:message fromHandle:_consoleHandle];
 	});
-}
-
-- (void)setRoom:(NSString *)roomId topic:(NSString *)topic
-{
-	NSDictionary *params = [NSDictionary dictionaryWithObject:topic forKey:@"topic"];
-	[self updateRoomWithId:roomId attributes:params];
-}
-
-- (void)setRoom:(NSString *)roomId name:(NSString *)name
-{
-	NSDictionary *params = [NSDictionary dictionaryWithObject:name forKey:@"name"];
-	[self updateRoomWithId:roomId attributes:params];
-}
-
-- (void)updateRoomWithId:(NSString *)roomId attributes:(NSDictionary *)attributes
-{
-	NSMutableDictionary *params = [NSMutableDictionary dictionaryWithDictionary:attributes];
-	MKNetworkOperation *changeTopicOperation = [self operationWithPath:[NSString stringWithFormat:@"room/%@.json", roomId] params:params httpMethod:@"PUT"];
-	[changeTopicOperation onCompletion:^(MKNetworkOperation *completedOperation) {
-		GFCampfireRoom *room = [_rooms objectForKey:roomId];
-		NSString *topic = [params objectForKey:@"topic"];
-		NSString *name = [params objectForKey:@"name"];
-		if (topic) {
-			room.topic = topic;
-			[serviceApplication plugInDidReceiveNotice:topic forChatRoom:roomId];
+	
+	GFCampfireAddBlockCommand(_commands, @"settings", @"Displays all settings or a single setting when key is supplied, sets the value of a setting (key=value)", ^(NSString *args) {
+		if ([args length] == 0) {
+			// all settings
+		} else {
+			NSArray *kvPair = [args componentsSeparatedByString:@"="];
+			if ([kvPair count] == 1) {
+				// getter
+			} else if ([kvPair count] == 2) {
+				//setter
+			} else {
+				// invalid
+			}
 		}
-		if (name) {
-			room.name = name;
-		}
-	} onError:^(NSError *error) {
-		
-	}];
-}
-
-- (void)lockRoom:(NSString *)roomId
-{
-	GFCampfireRoom *room = [_rooms objectForKey:roomId];
-	if (room && room.locked == NO) {
-		MKNetworkOperation *lockOperation = [self operationWithPath:[NSString stringWithFormat:@"room/%@/lock.json", roomId]
-															 params:nil
-														 httpMethod:@"POST"];
-		[lockOperation onCompletion:^(MKNetworkOperation *completedOperation) {
-			room.locked = YES;
-		} onError:^(NSError *error) {
-			
-		}];
-	}
-}
-
-- (void)unlockRoom:(NSString *)roomId
-{
-	GFCampfireRoom *room = [_rooms objectForKey:roomId];
-	if (room && room.locked == YES) {
-		MKNetworkOperation *unlockOperation = [self operationWithPath:[NSString stringWithFormat:@"room/%@/unlock.json", roomId]
-															   params:nil
-														   httpMethod:@"POST"];
-		[unlockOperation onCompletion:^(MKNetworkOperation *completedOperation) {
-			room.locked = NO;
-		} onError:^(NSError *error) {
-			
-		}];
-	}
+	});
 }
 
 - (GFCampfireCommand *)commandForMessage:(NSString *)message
