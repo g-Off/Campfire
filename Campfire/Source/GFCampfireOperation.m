@@ -22,6 +22,11 @@
 		}
 	}
 	self = [super initWithURLString:aURLString params:params httpMethod:method];
+	
+	// hack to remove all the accept languages
+	NSMutableURLRequest *theRequest = [self valueForKey:@"request"];
+	[theRequest setValue:nil forHTTPHeaderField:@"Accept-Language"];
+	
 	return self;
 }
 
