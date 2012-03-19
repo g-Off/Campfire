@@ -29,6 +29,11 @@
 	return nil;
 }
 
++ (NSDictionary *)jsonProperties
+{
+	return nil;
+}
+
 + (Class)classForType:(NSString *)type
 {
 	Class cls = Nil;
@@ -107,16 +112,58 @@
 
 - (void)updateWithDictionary:(NSDictionary *)dict
 {
+	// TODO: the following 3 dictionaries need to be created by walking class hierarchy from GFJSONObject
+	// down to actual class and creating a combined dictionary mapping (in case there are multiple layers
+	// of subclasses)
 	NSDictionary *nameMapping = [[self class] jsonMapping];
 	NSDictionary *valueTransformers = [[self class] valueTransformers];
+	NSDictionary *jsonMapping = [[self class] jsonMapping];
+	
 	[dict enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL *stop) {
 		NSString *jsonKey = key;
 		NSString *propertyName = [[nameMapping allKeysForObject:jsonKey] lastObject];
-		if (propertyName) {		
+		if (propertyName) {
+			// treat NSNull as nil
 			if ([obj isEqual:[NSNull null]]) {
 				obj = nil;
 			}
 			
+			// Now, translate the json object according to the JSON mapping
+			id jsonMappingObject = [jsonMapping objectForKey:propertyName];
+			Class cls = Nil;
+			if ([jsonMappingObject isKindOfClass:[NSString class]]) {
+				cls = NSClassFromString(jsonMappingObject);
+			} else {
+				cls = jsonMappingObject;
+			}
+			
+			if (cls != Nil && [cls isSubclassOfClass:[GFJSONObject class]]) {
+				if ([obj isKindOfClass:[NSArray class]]) {
+					NSArray *objArray = obj;
+					NSMutableArray *tempArray = [[NSMutableArray alloc] initWithCapacity:[objArray count]];
+					for (id arrayObj in objArray) {
+						if ([arrayObj isKindOfClass:[NSDictionary class]]) {
+							NSDictionary *arrayObjDict = arrayObj;
+							GFJSONObject *jsonObject = [(GFJSONObject *)[cls alloc] initWithDictionary:arrayObjDict];
+							[tempArray addObject:jsonObject];
+						} else if ([arrayObj isKindOfClass:cls]) {
+							// will this case ever get hit (for any reason) ?
+							[tempArray addObject:arrayObj];
+						} else {
+							// not a JSON dictionary
+						}
+					}
+					obj = [tempArray copy];
+				} else if ([obj isKindOfClass:[NSDictionary class]]) {
+					// TODO (?): either need to convert the dictionary into GFJSONObjects OR
+					// it is a dictionary containing GFJSONObjects as values...
+					NSDictionary *dictObj = obj;
+					GFJSONObject *jsonObject = [(GFJSONObject *)[cls alloc] initWithDictionary:dictObj];
+					obj = jsonObject;
+				}
+			}
+			
+			// Use any value transformers on the object
 			NSString *transformerName = [valueTransformers objectForKey:propertyName];
 			if (transformerName) {
 				NSValueTransformer *transformer = [NSValueTransformer valueTransformerForName:transformerName];
@@ -124,6 +171,8 @@
 					obj = [transformer transformedValue:obj];
 				}
 			}
+			
+			// Use KVC to actually set the value
 			[self setValue:obj forKey:propertyName];
 		}
 	}];
@@ -131,7 +180,60 @@
 
 - (id)JSONRepresentation
 {
-	return nil;
+	NSMutableDictionary *JSONRepresentation = [[NSMutableDictionary alloc] init];
+	
+	NSDictionary *nameMapping = [[self class] jsonMapping];
+	NSDictionary *valueTransformers = [[self class] valueTransformers];
+	
+	[nameMapping enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+		NSString *propertyName = key;
+		NSString *jsonKeyName = obj;
+		
+		id value = [self valueForKey:propertyName];
+		if (value) {
+			// Use any value transformers (in reverse if supported) on the object
+			NSString *transformerName = [valueTransformers objectForKey:propertyName];
+			if (transformerName) {
+				NSValueTransformer *transformer = [NSValueTransformer valueTransformerForName:transformerName];
+				if (transformer) {
+					if ([[transformer class] allowsReverseTransformation]) {
+						value = [transformer reverseTransformedValue:value];
+					} else {
+						value = nil;
+					}
+				}
+			}
+			
+			if ([value isKindOfClass:[GFJSONObject class]]) {
+				// reverse the JSON transformation
+			} else if ([value isKindOfClass:[NSArray class]]) {
+				NSArray *valueArray = value;
+				NSMutableArray *tempArray = [[NSMutableArray alloc] initWithCapacity:[valueArray count]];
+				for (id obj in valueArray) {
+					id transformedObj = obj; // TODO
+					
+					[tempArray addObject:transformedObj];
+				}
+			} else if ([value isKindOfClass:[NSDictionary class]]) {
+				// TODO (?)
+			}
+		}
+		
+		if (value == nil) {
+			value = [NSNull null]; // do we want to do this in all cases?
+		}
+		
+		// value must be: NSString, NSNumber, NSNull, NSArray, NSDictionary, ... ?
+		
+		[JSONRepresentation setObject:value forKey:jsonKeyName];
+	}];
+	
+	return [JSONRepresentation copy];
+}
+
+- (void)updateWithObject:(GFJSONObject *)__unused obj
+{
+	
 }
 
 @end

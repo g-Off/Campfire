@@ -12,6 +12,7 @@
 
 + (NSDictionary *)jsonMapping;
 + (NSDictionary *)valueTransformers;
++ (NSDictionary *)jsonProperties;
 
 + (void)registerClassPrefix:(NSString *)prefix;
 
