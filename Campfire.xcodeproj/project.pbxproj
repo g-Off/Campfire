@@ -21,6 +21,7 @@
 		6C0F235614DF53C1003F104C /* GFCampfireService.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C47C1A914DE04DC00AF16FA /* GFCampfireService.m */; };
 		6C0F235714DF53C1003F104C /* GFCampfireUpload.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C0F232D14DF07AB003F104C /* GFCampfireUpload.m */; };
 		6C0F235814DF53C1003F104C /* GFCampfireUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C47C1A314DE030400AF16FA /* GFCampfireUser.m */; };
+		6C31EC851514317F004BB8BF /* GFCampfireTweet.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C31EC841514317F004BB8BF /* GFCampfireTweet.m */; };
 		6C47C18514DDF67F00AF16FA /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C47C18414DDF67F00AF16FA /* CoreFoundation.framework */; };
 		6C47C18B14DDF67F00AF16FA /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 6C47C18914DDF67F00AF16FA /* InfoPlist.strings */; };
 		6C47C19814DDFE0F00AF16FA /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C47C19714DDFE0F00AF16FA /* Cocoa.framework */; };
@@ -70,6 +71,8 @@
 		6C0F234714DF5299003F104C /* GFCampfireAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GFCampfireAppDelegate.m; sourceTree = "<group>"; };
 		6C0F234A14DF5299003F104C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		6C0F235114DF5380003F104C /* CampfireApp-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "CampfireApp-Info.plist"; sourceTree = "<group>"; };
+		6C31EC831514317F004BB8BF /* GFCampfireTweet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFCampfireTweet.h; sourceTree = "<group>"; };
+		6C31EC841514317F004BB8BF /* GFCampfireTweet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireTweet.m; sourceTree = "<group>"; };
 		6C47C18114DDF67F00AF16FA /* Campfire.imserviceplugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Campfire.imserviceplugin; sourceTree = BUILT_PRODUCTS_DIR; };
 		6C47C18414DDF67F00AF16FA /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		6C47C18814DDF67F00AF16FA /* Campfire-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Campfire-Info.plist"; sourceTree = "<group>"; };
@@ -181,6 +184,36 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
+		6C31EC871516E724004BB8BF /* Campfire Objects */ = {
+			isa = PBXGroup;
+			children = (
+				6C0F232814DF0416003F104C /* GFCampfireMessage.h */,
+				6C0F232914DF0417003F104C /* GFCampfireMessage.m */,
+				6C47C1A514DE037800AF16FA /* GFCampfireRoom.h */,
+				6C47C1A614DE037800AF16FA /* GFCampfireRoom.m */,
+				6C31EC831514317F004BB8BF /* GFCampfireTweet.h */,
+				6C31EC841514317F004BB8BF /* GFCampfireTweet.m */,
+				6C0F232C14DF07AB003F104C /* GFCampfireUpload.h */,
+				6C0F232D14DF07AB003F104C /* GFCampfireUpload.m */,
+				6C47C1A214DE030400AF16FA /* GFCampfireUser.h */,
+				6C47C1A314DE030400AF16FA /* GFCampfireUser.m */,
+			);
+			name = "Campfire Objects";
+			sourceTree = "<group>";
+		};
+		6C31EC881516E74A004BB8BF /* JSON Handling */ = {
+			isa = PBXGroup;
+			children = (
+				6C7F498814E7315900B49AE4 /* GFJSONObject.h */,
+				6C7F498914E7315900B49AE4 /* GFJSONObject.m */,
+				6C796B9514FAE97000F35AD5 /* NSString+GFJSONObject.h */,
+				6C796B9614FAE97000F35AD5 /* NSString+GFJSONObject.m */,
+				6C796B9E14FB2B1E00F35AD5 /* GFJSONURLValueTransformer.h */,
+				6C796B9F14FB2B1E00F35AD5 /* GFJSONURLValueTransformer.m */,
+			);
+			name = "JSON Handling";
+			sourceTree = "<group>";
+		};
 		6C47C17614DDF67F00AF16FA = {
 			isa = PBXGroup;
 			children = (
@@ -241,31 +274,19 @@
 			isa = PBXGroup;
 			children = (
 				6CF93D15150C5AB300E2D2B6 /* NSLogger */,
+				6C7F493B14E4D8C900B49AE4 /* Lumberjack */,
 				6C9C717114EEB5700046AB0E /* GCDAsyncSocket.h */,
 				6C9C717214EEB5700046AB0E /* GCDAsyncSocket.m */,
-				6C7F493B14E4D8C900B49AE4 /* Lumberjack */,
-				6C0F232814DF0416003F104C /* GFCampfireMessage.h */,
-				6C0F232914DF0417003F104C /* GFCampfireMessage.m */,
-				6C47C1A514DE037800AF16FA /* GFCampfireRoom.h */,
-				6C47C1A614DE037800AF16FA /* GFCampfireRoom.m */,
+				6C31EC881516E74A004BB8BF /* JSON Handling */,
+				6C31EC871516E724004BB8BF /* Campfire Objects */,
 				6C47C1A814DE04DC00AF16FA /* GFCampfireService.h */,
 				6C47C1A914DE04DC00AF16FA /* GFCampfireService.m */,
 				6C47C19F14DE02E600AF16FA /* GFCampfireServicePlugIn.h */,
 				6C47C1A014DE02E600AF16FA /* GFCampfireServicePlugIn.m */,
-				6C0F232C14DF07AB003F104C /* GFCampfireUpload.h */,
-				6C0F232D14DF07AB003F104C /* GFCampfireUpload.m */,
-				6C47C1A214DE030400AF16FA /* GFCampfireUser.h */,
-				6C47C1A314DE030400AF16FA /* GFCampfireUser.m */,
-				6C7F498814E7315900B49AE4 /* GFJSONObject.h */,
-				6C7F498914E7315900B49AE4 /* GFJSONObject.m */,
 				6C5A883D14EDEA250058592F /* GFCampfireOperation.h */,
 				6C5A883E14EDEA250058592F /* GFCampfireOperation.m */,
 				6C58328514F1E47F0095AEB3 /* GFCampfireCommand.h */,
 				6C58328614F1E47F0095AEB3 /* GFCampfireCommand.m */,
-				6C796B9514FAE97000F35AD5 /* NSString+GFJSONObject.h */,
-				6C796B9614FAE97000F35AD5 /* NSString+GFJSONObject.m */,
-				6C796B9E14FB2B1E00F35AD5 /* GFJSONURLValueTransformer.h */,
-				6C796B9F14FB2B1E00F35AD5 /* GFJSONURLValueTransformer.m */,
 			);
 			path = Source;
 			sourceTree = "<group>";
@@ -440,6 +461,7 @@
 				6C796B9714FAE97000F35AD5 /* NSString+GFJSONObject.m in Sources */,
 				6C796BA014FB2B1F00F35AD5 /* GFJSONURLValueTransformer.m in Sources */,
 				6CF93D13150C5AAB00E2D2B6 /* LoggerClient.m in Sources */,
+				6C31EC851514317F004BB8BF /* GFCampfireTweet.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
