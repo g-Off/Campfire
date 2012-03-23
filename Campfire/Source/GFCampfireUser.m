@@ -10,6 +10,15 @@
 
 @implementation GFCampfireUser
 
+@synthesize name;
+@synthesize emailAddress;
+@synthesize admin;
+@synthesize createdAt;
+@synthesize type;
+@synthesize avatarURL;
+@synthesize userId;
+@synthesize apiAuthToken;
+
 + (NSDictionary *)jsonMapping
 {
 	return [NSDictionary dictionaryWithObjectsAndKeys:
@@ -19,6 +28,8 @@
 			@"avatar_url", @"avatarURL",
 			@"id", @"userId",
 			@"api_auth_token", @"apiAuthToken",
+			@"type", @"type",
+			@"created_at", @"createdAt",
 			nil];
 }
 
@@ -26,17 +37,10 @@
 {
 	return [NSDictionary dictionaryWithObjectsAndKeys:
 			@"GFJSONURLValueTransformer", @"avatarURL",
+			@"GFCampfireUserTypeValueTransformer", @"type",
+			@"GFCampfireDateValueTransformer", @"createdAt",
 			nil];
 }
-
-@synthesize name;
-@synthesize emailAddress;
-@synthesize admin;
-@synthesize createdAt;
-@synthesize type;
-@synthesize avatarURL;
-@synthesize userId;
-@synthesize apiAuthToken;
 
 /*
  {
@@ -52,17 +56,6 @@
 	 },
  }
  */
-
-- (void)updateWithDictionary:(NSDictionary *)dict
-{
-	[super updateWithDictionary:dict];
-	NSString *userType = [dict objectForKey:@"type"];
-	if ([userType isEqualToString:@"Member"]) {
-		self.type = GFCampfireUserTypeMember;
-	} else {
-		self.type = GFCampfireUserTypeGuest;
-	}
-}
 
 - (void)updateWithObject:(GFCampfireUser *)obj
 {
@@ -114,6 +107,62 @@
 - (BOOL)isEqual:(id)object
 {
 	return [object isKindOfClass:[self class]] && self.userId == ((GFCampfireUser *)object).userId;
+}
+
+@end
+
+@implementation GFCampfireUserTypeValueTransformer
+
++ (NSArray *)userTypes
+{
+	static NSArray *userTypes = nil;
+	static dispatch_once_t onceToken;
+	dispatch_once(&onceToken, ^{
+		userTypes = [[NSArray alloc] initWithObjects:
+						@"Member",
+						@"Guest",
+						nil];
+	});
+	return userTypes;
+}
+
++ (Class)transformedValueClass
+{
+	return [NSNumber class];
+}
+
++ (BOOL)allowsReverseTransformation
+{
+	return YES;
+}
+
+- (id)transformedValue:(id)value
+{
+	GFCampfireUserType userType = GFCampfireUserTypeGuest;
+	if ([value isKindOfClass:[NSString class]]) {
+		NSString *userTypeString = value;
+		NSArray *userTypes = [[self class] userTypes];
+		NSUInteger userTypeIndex = [userTypes indexOfObject:userTypeString];
+		if (userTypeIndex != NSNotFound) {
+			userType = userTypeIndex;
+		}
+	}
+	
+	return [NSNumber numberWithInteger:userType];
+}
+
+- (id)reverseTransformedValue:(id)value
+{
+	NSString *transformedValue = nil;
+	if ([value isKindOfClass:[NSNumber class]]) {
+		NSInteger userType = [(NSNumber *)value integerValue];
+		NSArray *userTypes = [[self class] userTypes];
+		if (userType >= 0 && userType < [userTypes count]) {
+			transformedValue = [userTypes objectAtIndex:userType];
+		}
+	}
+	
+	return transformedValue;
 }
 
 @end

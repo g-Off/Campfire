@@ -31,3 +31,7 @@ typedef enum {
 - (NSString *)avatarKey;
 
 @end
+
+@interface GFCampfireUserTypeValueTransformer : NSValueTransformer
+
+@end
