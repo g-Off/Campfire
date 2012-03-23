@@ -7,6 +7,8 @@
 //
 
 #import "GFCampfireRoom.h"
+#import "GFCampfireUser.h"
+
 
 @implementation GFCampfireRoom
 
@@ -49,20 +51,32 @@
 			@"updated_at", @"updatedAt",
 			@"created_at", @"createdAt",
 			@"open_to_guests", @"openToGuests",
+			@"users", @"users",
 			nil];
+}
+
++ (NSDictionary *)valueTransformers
+{
+	return [NSDictionary dictionaryWithObjectsAndKeys:
+			@"GFCampfireDateValueTransformer", @"updatedAt",
+			@"GFCampfireDateValueTransformer", @"createdAt",
+			nil];
+}
+
++ (NSDictionary *)jsonProperties
+{
+	return [NSDictionary dictionaryWithObject:[GFCampfireUser class] forKey:@"users"];
 }
 
 - (void)updateWithDictionary:(NSDictionary *)dict
 {
 	[super updateWithDictionary:dict];
 //	self.activeTokenValue;
-//	self.updatedAt;
-//	self.createdAt;
-	NSArray *usersArray = [dict objectForKey:@"users"];
-	if (usersArray) {
-		NSDictionary *usersDict = [NSDictionary dictionaryWithObject:usersArray forKey:@"users"];
-		self.users = [GFJSONObject objectWithDictionary:usersDict];
-	}
+//	NSArray *usersArray = [dict objectForKey:@"users"];
+//	if (usersArray) {
+//		NSDictionary *usersDict = [NSDictionary dictionaryWithObject:usersArray forKey:@"users"];
+//		self.users = [GFJSONObject objectWithDictionary:usersDict];
+//	}
 }
 
 - (void)updateWithObject:(GFJSONObject *)obj
