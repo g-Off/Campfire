@@ -43,4 +43,9 @@
 			nil];
 }
 
+- (NSString *)description
+{
+	return [NSString stringWithFormat:@"<%@> %@ - (%ul)%@", NSStringFromClass([self class]), self.authorUsername, self.tweetId, self.message];
+}
+
 @end

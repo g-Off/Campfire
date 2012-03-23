@@ -12,7 +12,7 @@
 
 @property (strong) NSURL *authorAvatarURL;
 @property (strong) NSString *authorUsername;
-@property (strong) NSString *tweetId;
+@property (assign) NSUInteger tweetId;
 @property (strong) NSString *message;
 
 @end
