@@ -52,6 +52,7 @@
 {
 	return [NSDictionary dictionaryWithObjectsAndKeys:
 			@"GFJSONURLValueTransformer", @"fullURL",
+			@"GFCampfireDateValueTransformer", @"createdAt",
 			nil];
 }
 
