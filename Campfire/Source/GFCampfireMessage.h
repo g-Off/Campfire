@@ -29,6 +29,8 @@ typedef enum {
 	GFCampfireMessageTypeUpload,
 } GFCampfireMessageType;
 
+@class GFCampfireTweet;
+
 @interface GFCampfireMessage : GFJSONObject
 
 @property (assign) NSInteger messageId;
@@ -38,9 +40,14 @@ typedef enum {
 @property (strong) NSDate *createdAt;
 @property (assign) GFCampfireMessageType type;
 @property (assign, getter = isStarred) BOOL starred;
+@property (strong) GFCampfireTweet *tweet;
 
 - (void)updateWithMessage:(GFCampfireMessage *)message;
 
 - (NSString *)messageKey;
+
+@end
+
+@interface GFCampfireMessageTypeValueTransformer : NSValueTransformer
 
 @end

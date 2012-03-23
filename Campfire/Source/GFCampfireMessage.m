@@ -7,6 +7,7 @@
 //
 
 #import "GFCampfireMessage.h"
+#import "GFCampfireTweet.h"
 
 @implementation GFCampfireMessage
 
@@ -17,6 +18,7 @@
 @synthesize createdAt;
 @synthesize type;
 @synthesize starred;
+@synthesize tweet;
 
 /*
  {
@@ -28,31 +30,39 @@
 	 "type": "EnterMessage",
 	 "user_id": 509886,
  }
-
- <message>
-	 <id type="integer">1</id>
-	 <room-id type="integer">1</room-id>
-	 <user-id type="integer">2</user-id>
-	 <body>Hello Room</body>
-	 <created-at type="datetime">2009-11-22T23:46:58Z</created-at>
-	 <type>#{TextMessage || PasteMessage || SoundMessage || AdvertisementMessage ||
-	 AllowGuestsMessage || DisallowGuestsMessage || IdleMessage || KickMessage ||
-	 LeaveMessage || SystemMessage || TimestampMessage || TopicChangeMessage ||
-	 UnidleMessage || UnlockMessage || UploadMessage || EnterMessage}</type>
-	 <starred>true</starred>
- </message>
  */
+
++ (NSDictionary *)jsonMapping
+{
+	return [NSDictionary dictionaryWithObjectsAndKeys:
+			@"id", @"messageId",
+			@"room_id", @"roomId",
+//			@"user_id", @"userId",
+			@"body", @"body",
+			@"created_at", @"createdAt",
+			@"type", @"type",
+			@"starred", @"starred",
+			@"tweet", @"tweet",
+			nil];
+}
+
++ (NSDictionary *)valueTransformers
+{
+	return [NSDictionary dictionaryWithObjectsAndKeys:
+			@"GFCampfireMessageTypeValueTransformer", @"type",
+			@"GFCampfireBOOLValueTransformer", @"starred",
+			@"GFCampfireDateValueTransformer", @"createdAt",
+			nil];
+}
+
++ (NSDictionary *)jsonProperties
+{
+	return [NSDictionary dictionaryWithObject:[GFCampfireTweet class] forKey:@"tweet"];
+}
 
 - (void)updateWithDictionary:(NSDictionary *)dict
 {
-	self.messageId = [(NSNumber *)[dict objectForKey:@"id"] integerValue];
-	
-	id roomIdObj = [dict objectForKey:@"room_id"];
-	if (roomIdObj && [roomIdObj isEqual:[NSNull null]] == NO) {
-		self.roomId = [(NSNumber *)[dict objectForKey:@"room_id"] integerValue];
-	} else {
-		self.roomId = NSNotFound;
-	}
+	[super updateWithDictionary:dict];
 	
 	// user_id can be null for TimestampMessage types
 	id userIdObj = [dict objectForKey:@"user_id"];
@@ -62,48 +72,7 @@
 		self.userId = NSNotFound;
 	}
 	
-	id bodyObj = [dict objectForKey:@"body"];
-	if (bodyObj && [bodyObj isEqual:[NSNull null]] == NO) {
-		self.body = [dict objectForKey:@"body"];
-	}
 //	self.createdAt;
-	GFCampfireMessageType messageType = GFCampfireMessageTypeUnknown;
-	NSString *messageTypeString = [dict objectForKey:@"type"];
-	if ([messageTypeString isEqualToString:@"TextMessage"]) {
-		messageType = GFCampfireMessageTypeText;
-	} else if ([messageTypeString isEqualToString:@"PasteMessage"]) {
-		messageType = GFCampfireMessageTypePaste;
-	} else if ([messageTypeString isEqualToString:@"SoundMessage"]) {
-		messageType = GFCampfireMessageTypeSound;
-	} else if ([messageTypeString isEqualToString:@"AdvertisementMessage"]) {
-		messageType = GFCampfireMessageTypeAdvertisement;
-	} else if ([messageTypeString isEqualToString:@"AllowGuestsMessage"]) {
-		messageType = GFCampfireMessageTypeAllowGuests;
-	} else if ([messageTypeString isEqualToString:@"DisallowGuestsMessage"]) {
-		messageType = GFCampfireMessageTypeDisallowGuests;
-	} else if ([messageTypeString isEqualToString:@"IdleMessage"]) {
-		messageType = GFCampfireMessageTypeIdle;
-	} else if ([messageTypeString isEqualToString:@"KickMessage"]) {
-		messageType = GFCampfireMessageTypeKick;
-	} else if ([messageTypeString isEqualToString:@"LeaveMessage"]) {
-		messageType = GFCampfireMessageTypeLeave;
-	} else if ([messageTypeString isEqualToString:@"SystemMessage"]) {
-		messageType = GFCampfireMessageTypeSystem;
-	} else if ([messageTypeString isEqualToString:@"TimestampMessage"]) {
-		messageType = GFCampfireMessageTypeTimestamp;
-	} else if ([messageTypeString isEqualToString:@"TopicChangeMessage"]) {
-		messageType = GFCampfireMessageTypeTopicChange;
-	} else if ([messageTypeString isEqualToString:@"UnidleMessage"]) {
-		messageType = GFCampfireMessageTypeUnidle;
-	} else if ([messageTypeString isEqualToString:@"UnlockMessage"]) {
-		messageType = GFCampfireMessageTypeUnlock;
-	} else if ([messageTypeString isEqualToString:@"UploadMessage"]) {
-		messageType = GFCampfireMessageTypeUpload;
-	} else if ([messageTypeString isEqualToString:@"EnterMessage"]) {
-		messageType = GFCampfireMessageTypeEnter;
-	}
-	self.type = messageType;
-	self.starred = [(NSNumber *)[dict objectForKey:@"starred"] boolValue];
 }
 
 - (void)updateWithObject:(GFJSONObject *)obj
@@ -126,7 +95,77 @@
 - (id)JSONRepresentation
 {
 	NSMutableDictionary *JSONRepresentation = [NSMutableDictionary dictionary];
-	return nil;
+	return [JSONRepresentation copy];
+}
+
+@end
+
+@implementation GFCampfireMessageTypeValueTransformer
+
++ (NSArray *)messageTypes
+{
+	static NSArray *messageTypes = nil;
+	static dispatch_once_t onceToken;
+	dispatch_once(&onceToken, ^{
+		messageTypes = [[NSArray alloc] initWithObjects:
+						@"TextMessage",
+						@"PasteMessage",
+						@"SoundMessage",
+						@"AdvertisementMessage",
+						@"AllowGuestsMessage",
+						@"DisallowGuestsMessage",
+						@"IdleMessage",
+						@"KickMessage",
+						@"LeaveMessage",
+						@"SystemMessage",
+						@"TimestampMessage",
+						@"TopicChangeMessage",
+						@"UnidleMessage",
+						@"UnlockMessage",
+						@"UploadMessage",
+						@"EnterMessage",
+						nil];
+	});
+	return messageTypes;
+}
+
++ (Class)transformedValueClass
+{
+	return [NSNumber class];
+}
+
++ (BOOL)allowsReverseTransformation
+{
+	return YES;
+}
+
+- (id)transformedValue:(id)value
+{
+	GFCampfireMessageType messageType = GFCampfireMessageTypeUnknown;
+	if ([value isKindOfClass:[NSString class]]) {
+		NSString *messageTypeString = value;
+		NSArray *messageTypes = [[self class] messageTypes];
+		NSUInteger messageTypeIndex = [messageTypes indexOfObject:messageTypeString];
+		if (messageTypeIndex != NSNotFound) {
+			messageType = messageTypeIndex;
+		}
+	}
+	
+	return [NSNumber numberWithInteger:messageType];
+}
+
+- (id)reverseTransformedValue:(id)value
+{
+	NSString *transformedValue = nil;
+	if ([value isKindOfClass:[NSNumber class]]) {
+		NSInteger messageType = [(NSNumber *)value integerValue];
+		NSArray *messageTypes = [[self class] messageTypes];
+		if (messageType >= 0 && messageType < [messageTypes count]) {
+			transformedValue = [messageTypes objectAtIndex:messageType];
+		}
+	}
+	
+	return transformedValue;
 }
 
 @end
