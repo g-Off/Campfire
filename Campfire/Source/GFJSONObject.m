@@ -117,7 +117,7 @@
 	// of subclasses)
 	NSDictionary *nameMapping = [[self class] jsonMapping];
 	NSDictionary *valueTransformers = [[self class] valueTransformers];
-	NSDictionary *jsonMapping = [[self class] jsonMapping];
+	NSDictionary *jsonProperties = [[self class] jsonProperties];
 	
 	[dict enumerateKeysAndObjectsUsingBlock:^(NSString *key, id obj, BOOL *stop) {
 		NSString *jsonKey = key;
@@ -129,7 +129,7 @@
 			}
 			
 			// Now, translate the json object according to the JSON mapping
-			id jsonMappingObject = [jsonMapping objectForKey:propertyName];
+			id jsonMappingObject = [jsonProperties objectForKey:propertyName];
 			Class cls = Nil;
 			if ([jsonMappingObject isKindOfClass:[NSString class]]) {
 				cls = NSClassFromString(jsonMappingObject);
