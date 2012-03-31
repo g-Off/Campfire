@@ -6,7 +6,7 @@
 //  Copyright (c) 2012 g-Off.net. All rights reserved.
 //
 
-#import <Foundation/Foundation.h>
+#import "GFJSONObject.h"
 
 /*
 <upload>
@@ -21,7 +21,7 @@
 </upload>
  */
 
-@interface GFCampfireUpload : NSObject
+@interface GFCampfireUpload : GFJSONObject
 
 @property (assign) NSInteger uploadId;
 @property (strong) NSString *name;
