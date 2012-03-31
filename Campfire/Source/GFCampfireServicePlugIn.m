@@ -159,7 +159,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	[loginOperation setUsername:_username password:_password basicAuth:YES];
 	[loginOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 		id json = [completedOperation responseJSON];
-		GFCampfireUser *newMe = [GFJSONObject objectWithDictionary:json];
+		GFCampfireUser *newMe = [GFCampfireUser objectWithDictionary:json];
 		if (_me && [_me isEqual:newMe]) {
 			[_me updateWithUser:newMe];
 		} else {
@@ -286,7 +286,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 																httpMethod:@"POST"];
 		[sendMessageOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 			id json = completedOperation.responseJSON;
-			__unused GFCampfireMessage *sentMessage = [GFJSONObject objectWithDictionary:json];
+			__unused GFCampfireMessage *sentMessage = [GFCampfireMessage objectWithDictionary:json];
 			[serviceApplication plugInDidSendMessage:message toChatRoom:roomId error:nil];
 		} onError:^(NSError *error) {
 			[serviceApplication plugInDidSendMessage:message toChatRoom:roomId error:error];
@@ -295,9 +295,26 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	}
 }
 
+- (NSString *)campfireMessageFromIMServiceMessage:(IMServicePlugInMessage *)serviceMessage
+{
+	// Campfire messages need to be in plain-text format so replace all "link" attributes with the actual URL value
+	NSAttributedString *serviceMessageBody = [serviceMessage content];
+	NSMutableString *message = [[serviceMessageBody string] mutableCopy];
+	
+	__block NSUInteger offset = 0;
+	[serviceMessageBody enumerateAttribute:IMAttributeLink inRange:NSMakeRange(0, [serviceMessageBody length]) options:0 usingBlock:^(id value, NSRange range, BOOL *stop) {
+		NSURL *url = value;
+		NSString *urlString = [url absoluteString];
+		NSRange replacementRange = NSMakeRange(offset + range.location, range.length);
+		[message replaceCharactersInRange:replacementRange withString:urlString];
+		offset += range.length - [urlString length];
+	}];
+	
+	return [message copy];
+}
+
 - (oneway void)declineChatRoomInvitation:(NSString *)roomName
 {
-	
 }
 
 #pragma mark -
@@ -380,8 +397,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	LOG_MESSAGE(GFCampfireLogLevelInfo, kGFCampfireLogDomainUser, @"updating group list %@", campfireGroup);
 	[serviceApplication plugInDidUpdateGroupList:[NSArray arrayWithObject:campfireGroup] error:nil];
 	
-	NSDictionary *handleProperties = [self propertiesOfHandle:_consoleHandle];
-	[serviceApplication plugInDidUpdateProperties:handleProperties ofHandle:_consoleHandle];
+	[self sendPropertiesOfHandle:_consoleHandle];
 }
 
 - (NSArray *)userList
@@ -392,11 +408,16 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	return [userList copy];
 }
 
+- (void)sendPropertiesOfHandle:(NSString *)handle
+{
+	NSDictionary *handleProperties = [self propertiesOfHandle:handle];
+	[serviceApplication plugInDidUpdateProperties:handleProperties ofHandle:handle];
+}
+
 - (void)sendPropertiesOfHandles:(NSArray *)handles
 {
 	[handles enumerateObjectsUsingBlock:^(id obj, NSUInteger idx, BOOL *stop) {
-		NSDictionary *handleProperties = [self propertiesOfHandle:obj];
-		[serviceApplication plugInDidUpdateProperties:handleProperties ofHandle:obj];
+		[self sendPropertiesOfHandle:obj];
 	}];
 }
 
@@ -513,11 +534,21 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	MKNetworkOperation *operation = [self operationWithPath:path params:nil httpMethod:@"GET"];
 	[operation onCompletion:^(MKNetworkOperation *completedOperation) {
 		id json = [completedOperation responseJSON];
-		__unused GFCampfireUpload *upload = [GFJSONObject objectWithDictionary:json];
+		__unused GFCampfireUpload *upload = [GFCampfireUpload objectWithDictionary:json];
 	} onError:^(NSError *error) {
 		
 	}];
 	[self enqueueOperation:operation];
+}
+
+- (void)addUser:(GFCampfireUser *)user
+{
+	GFCampfireUser *existingUser = [_users objectForKey:user.userKey];
+	if (existingUser) {
+		
+	} else {
+		[_users setObject:user forKey:user.userKey];
+	}
 }
 
 - (void)addRoom:(GFCampfireRoom *)room
@@ -575,12 +606,9 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	MKNetworkOperation *roomListOperation = [self operationWithPath:@"rooms.json" params:nil httpMethod:@"GET"];
 	[roomListOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 		id json = [completedOperation responseJSON];
-		NSArray *allRooms = [GFJSONObject objectWithDictionary:json];
+		NSArray *allRooms = [GFCampfireRoom objectWithDictionary:json];
 		
 		for (GFCampfireRoom *room in allRooms) {
-//			for (GFCampfireUser *user in room.users) {
-//				[self updateInformationForUser:user];
-//			}
 			[self addRoom:room];
 		}
 	} onError:^(NSError *error) {
@@ -594,7 +622,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	MKNetworkOperation *usersRooms = [self operationWithPath:@"presence.json" params:nil httpMethod:@"GET"];
 	[usersRooms onCompletion:^(MKNetworkOperation *completedOperation) {
 		id json = [completedOperation responseJSON];
-		NSArray *usersRooms = [GFJSONObject objectWithDictionary:json];
+		NSArray *usersRooms = [GFCampfireRoom objectWithDictionary:json];
 		
 		for (GFCampfireRoom *room in usersRooms) {
 			[self addRoom:room];
@@ -615,7 +643,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	MKNetworkOperation *roomOperation = [self operationWithPath:[NSString stringWithFormat:@"room/%@.json", roomId] params:nil httpMethod:@"GET"];
 	[roomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 		id json = [completedOperation responseJSON];
-		GFCampfireRoom *room = [GFJSONObject objectWithDictionary:json];
+		GFCampfireRoom *room = [GFCampfireRoom objectWithDictionary:json];
 		[self updateInformationForRoom:room didJoin:didJoin];
 	} onError:^(NSError *error) {
 		DDLogError(@"Error fetching room %@, %@", roomId, error);
@@ -628,7 +656,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	MKNetworkOperation *roomOperation = [self operationWithPath:[NSString stringWithFormat:@"room/%@.json", roomId] params:nil httpMethod:@"GET"];
 	[roomOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 		id json = [completedOperation responseJSON];
-		GFCampfireRoom *room = [GFJSONObject objectWithDictionary:json];
+		GFCampfireRoom *room = [GFCampfireRoom objectWithDictionary:json];
 	} onError:^(NSError *error) {
 		DDLogError(@"Error fetching room %@, %@", roomId, error);
 	}];
@@ -675,7 +703,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	MKNetworkOperation *recentMessagesOperation = [self operationWithPath:[NSString stringWithFormat:@"room/%@/recent.json", roomId] params:params httpMethod:@"GET"];
 	[recentMessagesOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 		id json = [completedOperation responseJSON];
-		NSArray *messages = [GFJSONObject objectWithDictionary:json];
+		NSArray *messages = [GFCampfireMessage objectWithDictionary:json];
 		[self processHistoryMessages:messages];
 	} onError:^(NSError *error) {
 		// couldn't fetch recents, do I care?
@@ -703,6 +731,9 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 
 - (void)processMessage:(GFCampfireMessage *)message historyMessage:(BOOL)isHistoryMessage streamMessage:(BOOL)isStreamMessage
 {
+	/* Tweet Message Format:
+	2012/03/16 16:51:56:476  Received Message: {"room_id":474752,"created_at":"2012/03/16 20:51:55 +0000","starred":"false","body":"--- \n:author_username: laurenleto\n:author_avatar_url: http://a0.twimg.com/profile_images/1857890926/Photo_on_2010-02-02_at_09.59__3_normal.jpg\n:message: \"RT @max_read: in case you missed it -- THAT FUCKIN GUY FROM THE KONY MOVIE GOT ARRESTED FOR TOUCHIN HIS DONG OUTSIDE SEA WORLD\"\n:id: 180755860962820097\n","id":524107769,"user_id":1115268,"type":"TweetMessage","tweet":{"author_avatar_url":"http://a0.twimg.com/profile_images/1857890926/Photo_on_2010-02-02_at_09.59__3_normal.jpg","author_username":"laurenleto","id":180755860962820097,"message":"RT @max_read: in case you missed it -- THAT FUCKIN GUY FROM THE KONY MOVIE GOT ARRESTED FOR TOUCHIN HIS DONG OUTSIDE SEA WORLD"}}
+	*/
 	if (message.roomId != NSNotFound) {
 		NSString *roomId = [[NSNumber numberWithInteger:message.roomId] stringValue];
 		NSString *userId = nil;
@@ -899,7 +930,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	
 	//	if (triggersUpdate) {
 	//		[self updateInformationForUserId:user.userKey];
-	[serviceApplication plugInDidUpdateProperties:[self propertiesOfHandle:user.userKey] ofHandle:user.userKey];
+	[self sendPropertiesOfHandle:user.userKey];
 	//	}
 }
 
@@ -909,7 +940,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	if (user) {
 		[self updateInformationForUser:user];
 	} else if ([userKey isEqualToString:_consoleHandle]) {
-		[serviceApplication plugInDidUpdateProperties:[self propertiesOfHandle:_consoleHandle] ofHandle:_consoleHandle];
+		[self sendPropertiesOfHandle:_consoleHandle];
 	}
 }
 
@@ -919,7 +950,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		MKNetworkOperation *getUserOperation = [self operationWithPath:[NSString stringWithFormat:@"users/%@.json", userId] params:nil httpMethod:@"GET"];
 		[getUserOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 			id json = [completedOperation responseJSON];
-			GFCampfireUser *user = [GFJSONObject objectWithDictionary:json];
+			GFCampfireUser *user = [GFCampfireUser objectWithDictionary:json];
 			[self updateInformationForUser:user];
 		} onError:^(NSError *error) {
 			// couldn't fetch user, do I care?
@@ -1112,17 +1143,23 @@ enum {
 	if (roomId) {
 		BOOL reconnecting = NO;
 		if (self.reachable) {
-			if ([[err domain] isEqualToString:GCDAsyncSocketErrorDomain] && [err code] == GCDAsyncSocketReadTimeoutError) {
+			NSString *errorDomain = [err domain];
+			NSInteger errorCode = [err code];
+			if ([errorDomain isEqualToString:GCDAsyncSocketErrorDomain]) {
+				if (errorCode == GCDAsyncSocketReadTimeoutError || errorCode == GCDAsyncSocketClosedError) {
+					[self startStreamingRoom:roomId];
+					reconnecting = YES;
+				}
+			} else if ([errorDomain isEqualToString:@"kCFStreamErrorDomainSSL"] && errorCode == errSSLClosedGraceful) {
 				[self startStreamingRoom:roomId];
 				reconnecting = YES;
-			} else if ([[err domain] isEqualToString:@"kCFStreamErrorDomainSSL"] && [err code] == errSSLClosedGraceful) {
-				[self startStreamingRoom:roomId];
-				reconnecting = YES;
-			} else if ([[err domain] isEqualToString:NSPOSIXErrorDomain] && [err code] == ETIMEDOUT) {
+			} else if ([errorDomain isEqualToString:NSPOSIXErrorDomain] && errorCode == ETIMEDOUT) {
 				// Operation Timed Out
 				[self startStreamingRoom:roomId];
 				reconnecting = YES;
 			}
+			
+			//Socket for room 474752 disconnected with error: Error Domain=GCDAsyncSocketErrorDomain Code=7 "Socket closed by remote peer" UserInfo=0x7f8c60d59d40 {NSLocalizedDescription=Socket closed by remote peer}
 		}
 		
 		if (!reconnecting) {
