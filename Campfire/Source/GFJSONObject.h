@@ -16,8 +16,9 @@
 
 + (void)registerClassPrefix:(NSString *)prefix;
 
++ (id)autoObjectWithDictionary:(NSDictionary *)dict;
 + (id)objectWithDictionary:(NSDictionary *)dict;
-- (id)initWithDictionary:(NSDictionary *)dict;
+- (instancetype)initWithDictionary:(NSDictionary *)dict;
 
 - (void)updateWithDictionary:(NSDictionary *)dict;
 - (void)updateWithObject:(GFJSONObject *)obj;

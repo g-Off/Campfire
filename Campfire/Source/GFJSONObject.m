@@ -72,36 +72,57 @@
 	[[self registeredClassPrefixes] addObject:prefix];
 }
 
-+ (id)objectWithDictionary:(NSDictionary *)dict
++ (id)newObjectOfClass:(Class)cls fromObject:(id)obj
+{
+	id returnObj = nil;
+	
+	if ([obj isKindOfClass:[NSArray class]]) {
+		NSArray *objArray = obj;
+		NSMutableArray *objects = [NSMutableArray arrayWithCapacity:[objArray count]];
+		for (id jsonObj in objArray) {
+			if ([jsonObj isKindOfClass:[NSDictionary class]]) {
+				NSDictionary *objectDict = jsonObj;
+				[objects addObject:[[cls alloc] initWithDictionary:objectDict]];
+			}
+		}
+		
+		returnObj = objects;
+	} else if ([obj isKindOfClass:[NSDictionary class]]) {
+		NSDictionary *objectDict = obj;
+		returnObj = [[cls alloc] initWithDictionary:objectDict];
+	}
+	
+	return returnObj;
+}
+
++ (id)autoObjectWithDictionary:(NSDictionary *)dict
 {
 	__block id returnObj = nil;
 	[dict enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
 		if ([key isKindOfClass:[NSString class]]) {
 			NSString *keyString = key;
 			Class objectClass = [self classForType:keyString];
-			
-			if ([obj isKindOfClass:[NSArray class]]) {
-				NSArray *objArray = obj;
-				NSMutableArray *objects = [NSMutableArray arrayWithCapacity:[objArray count]];
-				for (id jsonObj in objArray) {
-					if ([jsonObj isKindOfClass:[NSDictionary class]]) {
-						NSDictionary *objectDict = jsonObj;
-						[objects addObject:[[objectClass alloc] initWithDictionary:objectDict]];
-					}
-				}
-				
-				returnObj = objects;
-			} else if ([obj isKindOfClass:[NSDictionary class]]) {
-				NSDictionary *objectDict = obj;
-				returnObj = [[objectClass alloc] initWithDictionary:objectDict];
-			}
+			returnObj = [self newObjectOfClass:objectClass fromObject:obj];
 		}
 	}];
 	
 	return returnObj;
 }
 
-- (id)initWithDictionary:(NSDictionary *)dict
++ (id)objectWithDictionary:(NSDictionary *)dict
+{
+	__block id returnObj = nil;
+	[dict enumerateKeysAndObjectsUsingBlock:^(id key, id obj, BOOL *stop) {
+		if ([key isKindOfClass:[NSString class]]) {
+			Class objectClass = [self class];
+			returnObj = [self newObjectOfClass:objectClass fromObject:obj];
+		}
+	}];
+	
+	return returnObj;
+}
+
+- (instancetype)initWithDictionary:(NSDictionary *)dict
 {
 	if ((self = [super init])) {
 		[self updateWithDictionary:dict];
