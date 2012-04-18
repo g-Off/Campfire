@@ -166,7 +166,8 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 			_me = newMe;
 		}
 		
-		[self updateInformationForUser:_me];
+		[self addUser:_me];
+//		[self updateInformationForUser:_me];
 		[self getAllRooms];
 		[self getUserRooms];
 		[serviceApplication plugInDidLogIn];
@@ -388,16 +389,22 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 
 - (oneway void)requestGroupList
 {
-	NSMutableDictionary *campfireGroup = [NSMutableDictionary dictionary];
-	[campfireGroup setObject:@"Campfire" forKey:IMGroupListNameKey];
-	NSMutableArray *handles = [NSMutableArray arrayWithObject:_consoleHandle];
-	//	[handles addObjectsFromArray:_users.allKeys];
-	[campfireGroup setObject:handles forKey:IMGroupListHandlesKey];
-	DDLogInfo(@"Group List Updated: %@", campfireGroup);
-	LOG_MESSAGE(GFCampfireLogLevelInfo, kGFCampfireLogDomainUser, @"updating group list %@", campfireGroup);
-	[serviceApplication plugInDidUpdateGroupList:[NSArray arrayWithObject:campfireGroup] error:nil];
+	NSDictionary *group = [self userGroup];
+	DDLogInfo(@"Group List Updated: %@", group);
+	LOG_MESSAGE(GFCampfireLogLevelInfo, kGFCampfireLogDomainUser, @"updating group list %@", group);
+	[serviceApplication plugInDidUpdateGroupList:[NSArray arrayWithObject:group] error:nil];
 	
 	[self sendPropertiesOfHandle:_consoleHandle];
+}
+
+- (NSDictionary *)userGroup
+{
+	NSMutableDictionary *campfireGroup = [NSMutableDictionary dictionary];
+	[campfireGroup setObject:@"Campfire" forKey:IMGroupListNameKey];
+	NSArray *handles = [self userList];
+	[campfireGroup setObject:handles forKey:IMGroupListHandlesKey];
+	
+	return [campfireGroup copy];
 }
 
 - (NSArray *)userList
@@ -545,10 +552,15 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 {
 	GFCampfireUser *existingUser = [_users objectForKey:user.userKey];
 	if (existingUser) {
-		
+		[existingUser updateWithUser:user];
 	} else {
 		[_users setObject:user forKey:user.userKey];
+		
+		NSDictionary *group = [self userGroup];
+		[serviceApplication plugInDidUpdateGroupList:[NSArray arrayWithObject:group] error:nil];
 	}
+	
+	[self sendPropertiesOfHandle:user.userKey];
 }
 
 - (void)addRoom:(GFCampfireRoom *)room
@@ -566,8 +578,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		} else {
 			[users addObject:user];
 			[newUsers addObject:user];
-//			[self addUser:user]; // TODO: do this instead of below
-			[_users setObject:user forKey:user.userKey];
+			[self addUser:user];
 		}
 	}
 	
@@ -838,7 +849,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		}
 		
 		for (GFCampfireUser *user in [joinedUsers setByAddingObjectsFromSet:departedUsers]) {
-			[self updateInformationForUser:user];
+			[self addUser:user];
 		}
 	}
 	
@@ -910,35 +921,15 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 - (void)updateAllUsersInformation
 {
 	for (GFCampfireUser *user in _users.objectEnumerator) {
-		[self updateInformationForUser:user];
+		[self updateInformationForUserId:user.userKey];
 	}
-}
-
-- (void)updateInformationForUser:(GFCampfireUser *)user
-{
-	BOOL triggersUpdate = NO;
-	GFCampfireUser *existingUser = [_users objectForKey:user.userKey];
-	if (existingUser) {
-		if (existingUser != user) {
-			[existingUser updateWithUser:user];
-			triggersUpdate = YES;
-		}
-	} else {
-		triggersUpdate = YES;
-		[_users setObject:user forKey:user.userKey];
-	}
-	
-	//	if (triggersUpdate) {
-	//		[self updateInformationForUserId:user.userKey];
-	[self sendPropertiesOfHandle:user.userKey];
-	//	}
 }
 
 - (void)updateInformationForUserId:(NSString *)userKey
 {
 	GFCampfireUser *user = [_users objectForKey:userKey];
 	if (user) {
-		[self updateInformationForUser:user];
+		[self sendPropertiesOfHandle:userKey];
 	} else if ([userKey isEqualToString:_consoleHandle]) {
 		[self sendPropertiesOfHandle:_consoleHandle];
 	}
@@ -951,7 +942,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		[getUserOperation onCompletion:^(MKNetworkOperation *completedOperation) {
 			id json = [completedOperation responseJSON];
 			GFCampfireUser *user = [GFCampfireUser objectWithDictionary:json];
-			[self updateInformationForUser:user];
+			[self addUser:user];
 		} onError:^(NSError *error) {
 			// couldn't fetch user, do I care?
 			DDLogError(@"Error fetching info for user %@, %@", userId, error);
