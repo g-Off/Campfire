@@ -9,18 +9,7 @@
 /* Begin PBXBuildFile section */
 		6C0F232A14DF0417003F104C /* GFCampfireMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C0F232914DF0417003F104C /* GFCampfireMessage.m */; };
 		6C0F232E14DF07AB003F104C /* GFCampfireUpload.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C0F232D14DF07AB003F104C /* GFCampfireUpload.m */; };
-		6C0F233514DF5299003F104C /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C47C19714DDFE0F00AF16FA /* Cocoa.framework */; };
-		6C0F233F14DF5299003F104C /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 6C0F233D14DF5299003F104C /* InfoPlist.strings */; };
-		6C0F234114DF5299003F104C /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C0F234014DF5299003F104C /* main.m */; };
-		6C0F234514DF5299003F104C /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 6C0F234314DF5299003F104C /* Credits.rtf */; };
-		6C0F234814DF5299003F104C /* GFCampfireAppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C0F234714DF5299003F104C /* GFCampfireAppDelegate.m */; };
-		6C0F234B14DF5299003F104C /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6C0F234914DF5299003F104C /* MainMenu.xib */; };
 		6C0F235214DF5380003F104C /* CampfireApp-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6C0F235114DF5380003F104C /* CampfireApp-Info.plist */; };
-		6C0F235414DF53C1003F104C /* GFCampfireMessage.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C0F232914DF0417003F104C /* GFCampfireMessage.m */; };
-		6C0F235514DF53C1003F104C /* GFCampfireRoom.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C47C1A614DE037800AF16FA /* GFCampfireRoom.m */; };
-		6C0F235614DF53C1003F104C /* GFCampfireService.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C47C1A914DE04DC00AF16FA /* GFCampfireService.m */; };
-		6C0F235714DF53C1003F104C /* GFCampfireUpload.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C0F232D14DF07AB003F104C /* GFCampfireUpload.m */; };
-		6C0F235814DF53C1003F104C /* GFCampfireUser.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C47C1A314DE030400AF16FA /* GFCampfireUser.m */; };
 		6C31EC851514317F004BB8BF /* GFCampfireTweet.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C31EC841514317F004BB8BF /* GFCampfireTweet.m */; };
 		6C31EC8B15178EB9004BB8BF /* GFCampfireBOOLValueTransformer.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C31EC8A15178EB8004BB8BF /* GFCampfireBOOLValueTransformer.m */; };
 		6C47C18514DDF67F00AF16FA /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6C47C18414DDF67F00AF16FA /* CoreFoundation.framework */; };
@@ -60,18 +49,9 @@
 		6C0F232914DF0417003F104C /* GFCampfireMessage.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireMessage.m; sourceTree = "<group>"; };
 		6C0F232C14DF07AB003F104C /* GFCampfireUpload.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFCampfireUpload.h; sourceTree = "<group>"; };
 		6C0F232D14DF07AB003F104C /* GFCampfireUpload.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireUpload.m; sourceTree = "<group>"; };
-		6C0F233314DF5299003F104C /* CampfireApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CampfireApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6C0F233714DF5299003F104C /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
 		6C0F233814DF5299003F104C /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
 		6C0F233914DF5299003F104C /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
-		6C0F233C14DF5299003F104C /* CampfireApp-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "CampfireApp-Info.plist"; sourceTree = "<group>"; };
-		6C0F233E14DF5299003F104C /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
-		6C0F234014DF5299003F104C /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		6C0F234214DF5299003F104C /* CampfireApp-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "CampfireApp-Prefix.pch"; sourceTree = "<group>"; };
-		6C0F234414DF5299003F104C /* en */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; name = en; path = en.lproj/Credits.rtf; sourceTree = "<group>"; };
-		6C0F234614DF5299003F104C /* GFCampfireAppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GFCampfireAppDelegate.h; sourceTree = "<group>"; };
-		6C0F234714DF5299003F104C /* GFCampfireAppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = GFCampfireAppDelegate.m; sourceTree = "<group>"; };
-		6C0F234A14DF5299003F104C /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		6C0F235114DF5380003F104C /* CampfireApp-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "CampfireApp-Info.plist"; sourceTree = "<group>"; };
 		6C31EC831514317F004BB8BF /* GFCampfireTweet.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFCampfireTweet.h; sourceTree = "<group>"; };
 		6C31EC841514317F004BB8BF /* GFCampfireTweet.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireTweet.m; sourceTree = "<group>"; };
@@ -133,14 +113,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		6C0F233014DF5299003F104C /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				6C0F233514DF5299003F104C /* Cocoa.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6C47C17E14DDF67F00AF16FA /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -165,29 +137,6 @@
 				6C0F233914DF5299003F104C /* Foundation.framework */,
 			);
 			name = "Other Frameworks";
-			sourceTree = "<group>";
-		};
-		6C0F233A14DF5299003F104C /* CampfireApp */ = {
-			isa = PBXGroup;
-			children = (
-				6C0F234614DF5299003F104C /* GFCampfireAppDelegate.h */,
-				6C0F234714DF5299003F104C /* GFCampfireAppDelegate.m */,
-				6C0F234914DF5299003F104C /* MainMenu.xib */,
-				6C0F233B14DF5299003F104C /* Supporting Files */,
-			);
-			path = CampfireApp;
-			sourceTree = "<group>";
-		};
-		6C0F233B14DF5299003F104C /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				6C0F233C14DF5299003F104C /* CampfireApp-Info.plist */,
-				6C0F233D14DF5299003F104C /* InfoPlist.strings */,
-				6C0F234014DF5299003F104C /* main.m */,
-				6C0F234214DF5299003F104C /* CampfireApp-Prefix.pch */,
-				6C0F234314DF5299003F104C /* Credits.rtf */,
-			);
-			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
 		6C31EC871516E724004BB8BF /* Campfire Objects */ = {
@@ -225,7 +174,6 @@
 			isa = PBXGroup;
 			children = (
 				6C47C18614DDF67F00AF16FA /* Campfire */,
-				6C0F233A14DF5299003F104C /* CampfireApp */,
 				6C47C18314DDF67F00AF16FA /* Frameworks */,
 				6C47C18214DDF67F00AF16FA /* Products */,
 			);
@@ -235,7 +183,6 @@
 			isa = PBXGroup;
 			children = (
 				6C47C18114DDF67F00AF16FA /* Campfire.imserviceplugin */,
-				6C0F233314DF5299003F104C /* CampfireApp.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -353,23 +300,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		6C0F233214DF5299003F104C /* CampfireApp */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 6C0F234C14DF5299003F104C /* Build configuration list for PBXNativeTarget "CampfireApp" */;
-			buildPhases = (
-				6C0F232F14DF5299003F104C /* Sources */,
-				6C0F233014DF5299003F104C /* Frameworks */,
-				6C0F233114DF5299003F104C /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = CampfireApp;
-			productName = CampfireApp;
-			productReference = 6C0F233314DF5299003F104C /* CampfireApp.app */;
-			productType = "com.apple.product-type.application";
-		};
 		6C47C18014DDF67F00AF16FA /* Campfire */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6C47C18F14DDF67F00AF16FA /* Build configuration list for PBXNativeTarget "Campfire" */;
@@ -409,22 +339,11 @@
 			projectRoot = "";
 			targets = (
 				6C47C18014DDF67F00AF16FA /* Campfire */,
-				6C0F233214DF5299003F104C /* CampfireApp */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		6C0F233114DF5299003F104C /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				6C0F233F14DF5299003F104C /* InfoPlist.strings in Resources */,
-				6C0F234514DF5299003F104C /* Credits.rtf in Resources */,
-				6C0F234B14DF5299003F104C /* MainMenu.xib in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6C47C17F14DDF67F00AF16FA /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -441,20 +360,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		6C0F232F14DF5299003F104C /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				6C0F234114DF5299003F104C /* main.m in Sources */,
-				6C0F234814DF5299003F104C /* GFCampfireAppDelegate.m in Sources */,
-				6C0F235414DF53C1003F104C /* GFCampfireMessage.m in Sources */,
-				6C0F235514DF53C1003F104C /* GFCampfireRoom.m in Sources */,
-				6C0F235614DF53C1003F104C /* GFCampfireService.m in Sources */,
-				6C0F235714DF53C1003F104C /* GFCampfireUpload.m in Sources */,
-				6C0F235814DF53C1003F104C /* GFCampfireUser.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		6C47C17D14DDF67F00AF16FA /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -488,30 +393,6 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		6C0F233D14DF5299003F104C /* InfoPlist.strings */ = {
-			isa = PBXVariantGroup;
-			children = (
-				6C0F233E14DF5299003F104C /* en */,
-			);
-			name = InfoPlist.strings;
-			sourceTree = "<group>";
-		};
-		6C0F234314DF5299003F104C /* Credits.rtf */ = {
-			isa = PBXVariantGroup;
-			children = (
-				6C0F234414DF5299003F104C /* en */,
-			);
-			name = Credits.rtf;
-			sourceTree = "<group>";
-		};
-		6C0F234914DF5299003F104C /* MainMenu.xib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				6C0F234A14DF5299003F104C /* en */,
-			);
-			name = MainMenu.xib;
-			sourceTree = "<group>";
-		};
 		6C47C18914DDF67F00AF16FA /* InfoPlist.strings */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -523,28 +404,6 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		6C0F234D14DF5299003F104C /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "CampfireApp/CampfireApp-Prefix.pch";
-				INFOPLIST_FILE = "CampfireApp/CampfireApp-Info.plist";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				WRAPPER_EXTENSION = app;
-			};
-			name = Debug;
-		};
-		6C0F234E14DF5299003F104C /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "CampfireApp/CampfireApp-Prefix.pch";
-				INFOPLIST_FILE = "CampfireApp/CampfireApp-Info.plist";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				WRAPPER_EXTENSION = app;
-			};
-			name = Release;
-		};
 		6C47C18D14DDF67F00AF16FA /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -625,15 +484,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		6C0F234C14DF5299003F104C /* Build configuration list for PBXNativeTarget "CampfireApp" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				6C0F234D14DF5299003F104C /* Debug */,
-				6C0F234E14DF5299003F104C /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		6C47C17B14DDF67F00AF16FA /* Build configuration list for PBXProject "Campfire" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
