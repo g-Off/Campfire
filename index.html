@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Campfire for iChat : An iChat plugin to add 37signals Campfire chatroom support" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Campfire for iChat</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/g-Off/Campfire">Fork Me on GitHub</a>
+
+          <h1 id="project_title">Campfire for iChat</h1>
+          <h2 id="project_tagline">An iChat plugin to add 37signals Campfire chatroom support</h2>
+
+          <section id="downloads">
+            <a class="zip_download_link" href="https://github.com/g-Off/Campfire/zipball/master">Download this project as a .zip file</a>
+            <a class="tar_download_link" href="https://github.com/g-Off/Campfire/tarball/master">Download this project as a tar.gz file</a>
+          </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p>Campfire Plugin for Apples iChat Messenger application (and Messages Beta too) on Mac OS X 10.7+</p>
+
+<p>Please be aware that this started as a two day hackfest at <a href="http://www.shopify.com">Shopify</a> so some of the code is a bit messy and could use some cleanup.</p>
+
+<h3>Installation</h3>
+
+<p>Either <a href="https://github.com/downloads/g-Off/Campfire/Campfire.zip">Download the installer</a> or grab and build the source.</p>
+
+<p>If you've built from source then install to /Library/iChat/PlugIns or ~/Library/iChat/PlugIns and relaunch both iChat and the imagent service application.</p>
+
+<p>If you grabbed the Installer then just run that. It will automatically try and restart the imagent process on its own. If the service does not become available in iChat you may need to restart that as well. As a last resort please try restarting your Mac.</p>
+
+<h3>Usage</h3>
+
+<h4>Setup</h4>
+
+<ol>
+<li>Open iChat Preferences (⌘+,)</li>
+<li>Click the '+' button below accounts to add a new account</li>
+<li>Select 'Campfire' from the Account Types</li>
+<li>Enter your Campfire username/password and your Campfire server (without http:// or https://)</li>
+<li>If your account requires SSL please make sure to check off the 'Use SSL' box (I believe all accounts should use SSL)</li>
+<li>Done</li>
+</ol><h4>Chatting</h4>
+
+<p>A "Campfire" group is added to your buddy list and a user "Console" should appear. You can chat with the Console user. You can get a list of all the rooms by sending the message '/list' to Console. You'll see a list of room identifiers and the room name, find the room identifier of the room you want to join and then:</p>
+
+<ol>
+<li>File &gt; Go to Chat Room… (or ⌘+R)</li>
+<li>Select the Campfire account and enter the room identifier</li>
+<li>Hit the 'Go' button</li>
+<li>Chat Away!</li>
+</ol><h3>Building</h3>
+
+<p>Make sure before building you've either done your git clone with the --recursive option or a 'git submodule init' followed by a 'git submodule update'<br>
+Campfire.xcworkspace should now open and build</p>
+
+<h3>Debugging</h3>
+
+<p>Process for debugging iChat plugin is a bit involved, my method is below. If anyone can improve on this I would love to know.</p>
+
+<ul>
+<li>Modify Campfire debug scheme. Set the executable to IMServicePlugInAgent.app (located in /System/Library/Frameworks/IMServicePlugIn.framework/)</li>
+<li>Set the scheme Launch option to Wait for IMServicePluginAgent.app to launch</li>
+<li>Hit Run</li>
+<li>Now copy the built plugin (you can find the path that plugin is built to in the Xcode Organizer) into /Library/iChat/PlugIns</li>
+<li>Quit iChat</li>
+<li>Kill the imagent application
+*Relaunch iChat, debugger should now be attached to the application and you should be able to set breakpoints and debug as normal.</li>
+</ul><p>Recommended to disable other services you use in iChat while debugging so your contacts don't get annoyed with you constantly going online/offline</p>
+
+<h3>Known Issues</h3>
+
+<ul>
+<li>User avatars may not appear upon relaunch. iChat uses a caching mechanism for user avatars and doesn't seem to always re-request the image upon subsequent launches.</li>
+<li>Currently contact list is not updating when contacts come "online" or go "offline" (Campfire doesn't really support this but online/offline status is determined by if the user is present in any of the chats as the user)</li>
+<li>No support for uploads. Some code is partially in place with the goal to automatically download attachments to cache location and post a message in the chatroom with a file:// link</li>
+<li>Disconnecting from another client results in user appearing to have left chat room (however they remain connected)</li>
+</ul><h3>License</h3>
+
+<p>Licensed under the 3-clause BSD.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Campfire for iChat maintained by <a href="https://github.com/g-Off">g-Off</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
