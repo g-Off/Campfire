@@ -41,7 +41,6 @@
 		6C7F498A14E7315900B49AE4 /* GFJSONObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C7F498914E7315900B49AE4 /* GFJSONObject.m */; };
 		6C9C717314EEB5700046AB0E /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = 6C9C717214EEB5700046AB0E /* GCDAsyncSocket.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		6CB6D558151C19CA00F55E76 /* GFCampfireDateValueTransformer.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CB6D557151C19CA00F55E76 /* GFCampfireDateValueTransformer.m */; };
-		6CF93D13150C5AAB00E2D2B6 /* LoggerClient.m in Sources */ = {isa = PBXBuildFile; fileRef = 6CF93D11150C5AAB00E2D2B6 /* LoggerClient.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -107,9 +106,6 @@
 		6C9C717214EEB5700046AB0E /* GCDAsyncSocket.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GCDAsyncSocket.m; sourceTree = "<group>"; };
 		6CB6D556151C19CA00F55E76 /* GFCampfireDateValueTransformer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GFCampfireDateValueTransformer.h; sourceTree = "<group>"; };
 		6CB6D557151C19CA00F55E76 /* GFCampfireDateValueTransformer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GFCampfireDateValueTransformer.m; sourceTree = "<group>"; };
-		6CF93D10150C5AAB00E2D2B6 /* LoggerClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LoggerClient.h; path = "NSLogger/Client Logger/iOS/LoggerClient.h"; sourceTree = SOURCE_ROOT; };
-		6CF93D11150C5AAB00E2D2B6 /* LoggerClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = LoggerClient.m; path = "NSLogger/Client Logger/iOS/LoggerClient.m"; sourceTree = SOURCE_ROOT; };
-		6CF93D12150C5AAB00E2D2B6 /* LoggerCommon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LoggerCommon.h; path = "NSLogger/Client Logger/iOS/LoggerCommon.h"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -227,7 +223,6 @@
 		6C47C19E14DE02E600AF16FA /* Source */ = {
 			isa = PBXGroup;
 			children = (
-				6CF93D15150C5AB300E2D2B6 /* NSLogger */,
 				6C7F493B14E4D8C900B49AE4 /* Lumberjack */,
 				6C9C717114EEB5700046AB0E /* GCDAsyncSocket.h */,
 				6C9C717214EEB5700046AB0E /* GCDAsyncSocket.m */,
@@ -285,16 +280,6 @@
 				6CB6D557151C19CA00F55E76 /* GFCampfireDateValueTransformer.m */,
 			);
 			name = "Value Transformers";
-			sourceTree = "<group>";
-		};
-		6CF93D15150C5AB300E2D2B6 /* NSLogger */ = {
-			isa = PBXGroup;
-			children = (
-				6CF93D10150C5AAB00E2D2B6 /* LoggerClient.h */,
-				6CF93D11150C5AAB00E2D2B6 /* LoggerClient.m */,
-				6CF93D12150C5AAB00E2D2B6 /* LoggerCommon.h */,
-			);
-			name = NSLogger;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -383,7 +368,6 @@
 				6C58328714F1E47F0095AEB3 /* GFCampfireCommand.m in Sources */,
 				6C796B9714FAE97000F35AD5 /* NSString+GFJSONObject.m in Sources */,
 				6C796BA014FB2B1F00F35AD5 /* GFJSONURLValueTransformer.m in Sources */,
-				6CF93D13150C5AAB00E2D2B6 /* LoggerClient.m in Sources */,
 				6C31EC851514317F004BB8BF /* GFCampfireTweet.m in Sources */,
 				6C31EC8B15178EB9004BB8BF /* GFCampfireBOOLValueTransformer.m in Sources */,
 				6CB6D558151C19CA00F55E76 /* GFCampfireDateValueTransformer.m in Sources */,

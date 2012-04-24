@@ -13,8 +13,6 @@
 #import "DDTTYLogger.h"
 #import "DDFileLogger.h"
 
-#import "LoggerClient.h"
-
 #import <MKNetworkKit/MKNetworkKit.h>
 
 #import "GFJSONObject.h"
@@ -31,22 +29,6 @@
 
 static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 static NSString *kGFCampfireErrorDomain = @"GFCampfireErrorDomain";
-
-typedef enum {
-	GFCampfireLogLevelError,
-	GFCampfireLogLevelWarning,
-	GFCampfireLogLevelInfo,
-	GFCampfireLogLevelDebug,
-} GFCampfireLogLevel;
-
-#define LOG_MESSAGE(level, domain, ...) LogMessageF(__FILE__, __LINE__, __FUNCTION__, domain, level, __VA_ARGS__)
-#define LOG_IMAGE(level, domain, data) LogImageDataF(__FILE__, __LINE__, __FUNCTION__, domain, level, 0, 0, data)
-
-static NSString *kGFCampfireLogDomainAvatar		= @"avatar";
-static NSString *kGFCampfireLogDomainUser		= @"user";
-static NSString *kGFCampfireLogDomainChat		= @"chat";
-static NSString *kGFCampfireLogDomainConsole	= @"console";
-static NSString *kGFCampfireLogDomainNetwork	= @"network";
 
 enum {
 	GFCampfireErrorConsoleInvalidCommand,
@@ -128,8 +110,6 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		_avatarCache = [[NSCache alloc] init];
 		
 		[self addCommands];
-		
-		LoggerSetupBonjour(NULL, NULL, NULL);
 	}
 	
 	return self;
@@ -153,8 +133,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 
 - (oneway void)login
 {
-	DDLogInfo(@"================================================================================");
-	LogMarker([NSString stringWithFormat:@"Beginning new session for %@", _username]);
+	DDLogInfo(@"Beginning new session for %@ ================================================================================", _username);
 	MKNetworkOperation *loginOperation = [_networkEngine operationWithPath:@"users/me.json" params:nil httpMethod:@"GET" ssl:_useSSL];
 	[loginOperation setUsername:_username password:_password basicAuth:YES];
 	[loginOperation onCompletion:^(MKNetworkOperation *completedOperation) {
@@ -186,9 +165,8 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	for (GCDAsyncSocket *socket in _chatStreams.objectEnumerator) {
 		[socket disconnect];
 	}
-	[_chatStreams removeAllObjects];
 	[serviceApplication plugInDidLogOutWithError:nil reconnect:NO];
-	LogMarker([NSString stringWithFormat:@"Ending session for %@", _username]);
+	DDLogInfo(@"Ending session for %@ ================================================================================", _username);
 	_me = nil;
 }
 
@@ -213,7 +191,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 
 - (void)enqueueOperation:(MKNetworkOperation *)operation forceReload:(BOOL)forceReload
 {
-	LOG_MESSAGE(GFCampfireLogLevelDebug, kGFCampfireLogDomainNetwork, @"Performing request: %@", [operation curlCommandLineString]);
+	DDLogVerbose(@"Performing request: %@", [operation curlCommandLineString]);
 	[_networkEngine enqueueOperation:operation forceReload:forceReload];
 }
 
@@ -247,7 +225,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 		// TODO: find a way to make this a preference
 		[self leaveRoom:roomId];
 	}
-	[self didLeaveRoom:roomId];
+	[self didLeaveRoom:roomId error:nil];
 }
 
 - (void)leaveRoom:(NSString *)roomId
@@ -259,10 +237,15 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	[self enqueueOperation:leaveRoomOperation forceReload:YES];
 }
 
-- (void)didLeaveRoom:(NSString *)roomId
+- (void)didLeaveRoom:(NSString *)roomId error:(NSError *)error
 {
+	if (error) {
+		DDLogError(@"Left Room: %@ with error: %@", roomId, error);
+	} else {
+		DDLogInfo(@"Left Room: %@", roomId);
+	}
 	[self stopStreamingRoom:roomId];
-	[serviceApplication plugInDidLeaveChatRoom:roomId error:nil];
+	[serviceApplication plugInDidLeaveChatRoom:roomId error:error];
 	[_activeRooms removeObject:roomId];
 }
 
@@ -324,7 +307,6 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 - (oneway void)requestPictureForHandle:(NSString *)handle withIdentifier:(NSString *)identifier
 {
 	DDLogInfo(@"Avatar with identifier %@ requested for handle %@", identifier, handle);
-	LOG_MESSAGE(GFCampfireLogLevelDebug, kGFCampfireLogDomainAvatar, @"requesting identifier %@ for handle %@", identifier, handle);
 	
 	NSData *avatarData = nil;
 	
@@ -348,8 +330,7 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 											   [_avatarCache setObject:data forKey:user.avatarURL];
 											   [self userId:handle avatarUpdatedWithData:data withIdentifier:identifier];
 										   } else {
-											   DDLogError(@"Error fetching avatar: %@", error);
-											   LOG_MESSAGE(GFCampfireLogLevelError, kGFCampfireLogDomainAvatar, @"failed requesting identifier %@ for handle %@ with error %@", identifier, handle, error);
+											   DDLogError(@"Failed requesting identifier %@ for handle %@ with error %@", identifier, handle, error);
 										   }
 									   }];
 			}
@@ -364,13 +345,10 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 - (void)userId:(NSString *)userId avatarUpdatedWithData:(NSData *)data withIdentifier:(NSString *)identifier
 {
 	if ([userId length] == 0) {
-		LOG_MESSAGE(GFCampfireLogLevelError, kGFCampfireLogDomainAvatar, @"userId cannot be nil or 0-length");
 		DDLogError(@"Avatar update failed: userId cannot be nil or 0-length");
 	} else if ([data length] == 0) {
-		LOG_MESSAGE(GFCampfireLogLevelError, kGFCampfireLogDomainAvatar, @"data cannot be nil or 0-length");
 		DDLogError(@"Avatar update failed: data cannot be nil or 0-length");
 	} else if ([identifier length] == 0) {
-		LOG_MESSAGE(GFCampfireLogLevelError, kGFCampfireLogDomainAvatar, @"identifier cannot be nil or 0-length");
 		DDLogError(@"Avatar update failed: identifier cannot be nil or 0-length");
 	} else {
 		NSDictionary *userProperties = [NSDictionary dictionaryWithObjectsAndKeys:
@@ -378,8 +356,6 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 										identifier, IMHandlePropertyPictureIdentifier,
 										nil];
 		DDLogInfo(@"Avatar updated: user=%@, identifier=%@", userId, identifier);
-		LOG_MESSAGE(GFCampfireLogLevelInfo, kGFCampfireLogDomainAvatar, @"updating avatar for user %@ with identifier %@", userId, identifier);
-		LOG_IMAGE(GFCampfireLogLevelInfo, kGFCampfireLogDomainAvatar, data);
 		[serviceApplication plugInDidUpdateProperties:userProperties ofHandle:userId];
 	}
 }
@@ -391,7 +367,6 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 {
 	NSDictionary *group = [self userGroup];
 	DDLogInfo(@"Group List Updated: %@", group);
-	LOG_MESSAGE(GFCampfireLogLevelInfo, kGFCampfireLogDomainUser, @"updating group list %@", group);
 	[serviceApplication plugInDidUpdateGroupList:[NSArray arrayWithObject:group] error:nil];
 	
 	[self sendPropertiesOfHandle:_consoleHandle];
@@ -471,7 +446,6 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	}
 	
 	DDLogInfo(@"User %@ updated: %@", handle, properties);
-	LOG_MESSAGE(GFCampfireLogLevelInfo, kGFCampfireLogDomainUser, @"updating user %@ with properties %@", handle, properties);
 	return [properties copy];
 }
 
@@ -984,7 +958,6 @@ static NSString *kGFCampfireRoomLastMessage = @"GFCampfireRoomLastMessage";
 	if (asyncSocket) {
 		[asyncSocket disconnect];
 	}
-	[_chatStreams removeObjectForKey:roomId];
 }
 
 #pragma mark -
@@ -1033,12 +1006,18 @@ enum {
 	if (header) {
 		// check validity of the header and if all is good continue reading stream
 		CFIndex statusCode = CFHTTPMessageGetResponseStatusCode(header);
-		if (statusCode >= 200 && statusCode < 300) {
+		if (statusCode == 200) {
 			// TODO: this is where I should fetch all history messages
 			[self readNextMessageFromStreamingSocket:socket];
+		} else {
+			// XXX: what to do if failure here?
+			// saw a 401 Unauthorized in logs
+			// for now just leave the room and present error
+			NSString *statusMessage = (__bridge NSString *)CFHTTPMessageCopyResponseStatusLine(header);
+			NSDictionary *userInfo = [NSDictionary dictionaryWithObject:statusMessage forKey:NSLocalizedDescriptionKey];
+			NSError *error = [NSError errorWithDomain:kGFCampfireErrorDomain code:statusCode userInfo:userInfo];
+			[self didLeaveRoom:roomId error:error];
 		}
-		// XXX: what to do if failure here?
-		// saw a 401 Unauthorized in logs
 	}
 }
 
@@ -1058,9 +1037,10 @@ enum {
 				[scanner scanUpToString:@" " intoString:&httpVersionString];
 				NSInteger httpCode = 0;
 				[scanner scanInteger:&httpCode];
+				NSString *statusMessage = [header substringFromIndex:[scanner scanLocation]];
 				
 				CFStringRef httpVersion = [httpVersionString isEqualToString:@"1.1"] ? kCFHTTPVersion1_1 : kCFHTTPVersion1_0;
-				response = CFHTTPMessageCreateResponse(kCFAllocatorDefault, httpCode, NULL, httpVersion);
+				response = CFHTTPMessageCreateResponse(kCFAllocatorDefault, httpCode, (__bridge CFStringRef)statusMessage, httpVersion);
 			} else {
 				NSArray *headerFieldValue = [headerPart componentsSeparatedByString:@": "];
 				if ([headerFieldValue count] == 2) {
@@ -1069,8 +1049,9 @@ enum {
 			}
 		}];
 	}
-	
-	[self socketStream:socket receivedHeader:response forRoomId:[self roomIdForSocket:socket]];
+	NSString *roomId = [self roomIdForSocket:socket];
+	DDLogInfo(@"Received Header for stream from room %@ - %@", roomId, header);
+	[self socketStream:socket receivedHeader:response forRoomId:roomId];
 }
 
 - (void)processMessage:(NSString *)message forSocketStream:(__unsafe_unretained GCDAsyncSocket *)socket
@@ -1131,6 +1112,7 @@ enum {
 {
 	NSString *roomId = [self roomIdForSocket:sock];
 	DDLogWarn(@"Socket for room %@ disconnected with error: %@", roomId, err);
+	[_chatStreams removeObjectForKey:roomId];
 	if (roomId) {
 		BOOL reconnecting = NO;
 		if (self.reachable) {
